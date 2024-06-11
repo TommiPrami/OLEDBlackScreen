@@ -11,8 +11,9 @@ Idea is to have sleep and screensaver blocking "Screen saver". Currently in a st
   - [Rest of the stuff into here]
 
 ### TODO:
-- Some kind of settinsg screen
+- ~~Some kind of settinsg screen~~
 - trayincon menu
 - most likely right click menu
-- Saving and using settings
-  - configurable timeouts etc.
+- ~~Saving and using settings~~
+  - ~~configurable timeouts etc.~~
+- ...
