@@ -11,6 +11,7 @@ object OLBMainForm: TOLBMainForm
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
   OnMouseMove = FormMouseMove
