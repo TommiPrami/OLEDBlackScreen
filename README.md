@@ -1,5 +1,5 @@
 # OLEDBlackScreen
-Screen saver kind all to save OLED screen (Which blocks ScreenSaver)
+Screen saver kind app to save OLED screen (Which blocks ScreenSaver)
 
 [## Work heavily in progress]
 
