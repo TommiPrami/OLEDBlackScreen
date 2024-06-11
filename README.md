@@ -7,7 +7,7 @@ Idea is to have sleep and screensaver blocking "Screen saver". Currently in a st
 
 ### Usage:
   - Hide: **Esc**-key
-  - Shut Down/Close: **Alt+F**, **Ctrl+X** and **Ctrl+C**
+  - Shut Down/Close: **Alt+F4**, **Ctrl+X** and **Ctrl+C**
   - [Rest of the stuff into here]
 
 ### TODO:
