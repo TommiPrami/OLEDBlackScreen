@@ -6,7 +6,7 @@ uses
   Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.Diagnostics, System.ImageList,
   System.SysUtils, System.Variants, System.Win.TaskbarCore, Vcl.ActnList, Vcl.BaseImageCollection, Vcl.Controls,
   Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.ImgList, Vcl.StdActns, Vcl.Taskbar, Vcl.VirtualImageList,
-  OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList;
+  OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus;
 
 { TODO:
         Check these:
@@ -20,10 +20,14 @@ type
     ActionClose: TAction;
     ActionList: TActionList;
     ActionStopSavingScreen: TAction;
-    SVGIconImageCollection: TSVGIconImageCollection;
-    SVGIconVirtualImageList: TSVGIconVirtualImageList;
     Timer: TTimer;
     TrayIcon: TTrayIcon;
+    ImageListTrayIcon: TImageList;
+    PopupMenuTrayIcon: TPopupMenu;
+    Settings1: TMenuItem;
+    ActionSettings: TAction;
+    N1: TMenuItem;
+    Exit1: TMenuItem;
     procedure ActionCloseExecute(Sender: TObject);
     procedure ActionStopSavingScreenExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -31,6 +35,8 @@ type
     procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure TimerTimer(Sender: TObject);
     procedure TrayIconDblClick(Sender: TObject);
+    procedure ActionSettingsExecute(Sender: TObject);
+    procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
   strict private
     { Private declarations }
     FMouseDistance: TMouseDistance;
@@ -57,6 +63,13 @@ uses
 procedure TOLBMainForm.ActionCloseExecute(Sender: TObject);
 begin
   Close;
+end;
+
+procedure TOLBMainForm.ActionSettingsExecute(Sender: TObject);
+begin
+  if not Assigned(OLBSettingsForm) then
+    if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
+      WriteSettings(FSettingsFullFilename, FSettings);
 end;
 
 procedure TOLBMainForm.ActionStopSavingScreenExecute(Sender: TObject);
@@ -92,6 +105,14 @@ begin
     StopSavingScreen;
 end;
 
+procedure TOLBMainForm.FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if Button = mbRight then
+    PopupMenuTrayIcon.Popup(X, Y)
+  else
+    StopSavingScreen;
+end;
+
 procedure TOLBMainForm.StartSavingScreen;
 begin
   BorderStyle := bsNone;
@@ -99,6 +120,8 @@ begin
 {$IFDEF RELEASE}
   // For now only in release version because iy ids too easy to paint your self into the corner with this
   WindowState := TWindowState.wsMaximized;
+{$ELSE}
+  WindowState := TWindowState.wsNormal;
 {$ENDIF}
 
   FormStyle := fsStayOnTop;
@@ -134,9 +157,7 @@ end;
 
 procedure TOLBMainForm.TrayIconDblClick(Sender: TObject);
 begin
-  if not Assigned(OLBSettingsForm) then
-    if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
-      WriteSettings(FSettingsFullFilename, FSettings);
+  ActionSettings.Execute;
 end;
 
 end.
