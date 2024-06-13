@@ -15,9 +15,10 @@ Starts as minimized to tray. (So if you start this, it seems that nothing happen
 
 ### TODO:
 
-- trayincon menu
-- most likely right click menu
-- Fix Tray Incon (Showns only black)
+- ~~Add pause-functionality~~
+- ~~trayincon menu~~
+- ~~most likely right click menu~~
+- ~~Fix Tray Incon (Showns only black)~~
 - ~~Some kind of settinsg screen~~
   - ~~Saving and using settings~~
   - ~~configurable timeouts etc.~~
