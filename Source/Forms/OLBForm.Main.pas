@@ -19,33 +19,42 @@ type
   TOLBMainForm = class(TForm)
     ActionClose: TAction;
     ActionList: TActionList;
-    ActionStopSavingScreen: TAction;
-    Timer: TTimer;
-    TrayIcon: TTrayIcon;
-    ImageListTrayIcon: TImageList;
-    PopupMenuTrayIcon: TPopupMenu;
-    Settings1: TMenuItem;
     ActionSettings: TAction;
-    N1: TMenuItem;
-    Exit1: TMenuItem;
+    ActionStopSavingScreen: TAction;
+    ImageListTrayIcon: TImageList;
+    MenuItemExit: TMenuItem;
+    MenuItemPause: TMenuItem;
+    MenuItemPause10min: TMenuItem;
+    MenuItemPause30min: TMenuItem;
+    MenuItemPause45min: TMenuItem;
+    MenuItemPause60min: TMenuItem;
+    MenuItemSeparator: TMenuItem;
+    MenuItemSettings: TMenuItem;
+    PopupMenuTrayIcon: TPopupMenu;
+    Timer: TTimer;
     TimerAfterShow: TTimer;
+    TrayIcon: TTrayIcon;
     procedure ActionCloseExecute(Sender: TObject);
+    procedure ActionSettingsExecute(Sender: TObject);
     procedure ActionStopSavingScreenExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure MenuItemPauseClick(Sender: TObject);
+    procedure TimerAfterShowTimer(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
     procedure TrayIconDblClick(Sender: TObject);
-    procedure ActionSettingsExecute(Sender: TObject);
-    procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure TimerAfterShowTimer(Sender: TObject);
   strict private
     { Private declarations }
     FMouseDistance: TMouseDistance;
     FSettings: TSettings;
     FSettingsFullFilename: string;
+    FPauseUntil: TDateTime;
     procedure StartSavingScreen;
     procedure StopSavingScreen;
+    procedure PauseFor(const AMinutesToPause: Integer);
+    procedure GetRidOfCheckedPauseMenu;
   protected
     procedure CreateParams(var AParams: TCreateParams); override;
   public
@@ -58,7 +67,7 @@ var
 implementation
 
 uses
-  OBSUnit.Utils, OLBForm.Settings;
+  System.DateUtils, System.Math, OBSUnit.Utils, OLBForm.Settings;
 
 {$R *.dfm}
 
@@ -95,6 +104,8 @@ end;
 procedure TOLBMainForm.FormCreate(Sender: TObject);
 begin
   Visible := False;
+  FPauseUntil := 0.00;
+
   LoadSettings(FSettingsFullFilename, FSettings);
 
   FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
@@ -115,8 +126,35 @@ begin
     StopSavingScreen;
 end;
 
+procedure TOLBMainForm.GetRidOfCheckedPauseMenu;
+begin
+  for var LIndex := 0 to MenuItemPause.Count - 1 do
+    if MenuItemPause.Items[LIndex].Checked then
+      MenuItemPause.Items[LIndex].Checked := False;
+end;
+
+procedure TOLBMainForm.MenuItemPauseClick(Sender: TObject);
+begin
+  if Sender is TMenuItem then
+  begin
+    var LMenuItem := Sender as TMenuItem;
+
+    if LMenuItem.Tag > 0 then
+      PauseFor(LMenuItem.Tag);
+  end;
+end;
+
+procedure TOLBMainForm.PauseFor(const AMinutesToPause: Integer);
+begin
+  FPauseUntil := IncMinute(Now, AMinutesToPause);
+end;
+
 procedure TOLBMainForm.StartSavingScreen;
 begin
+  if not IsZero(FPauseUntil) then
+    GetRidOfCheckedPauseMenu;
+
+  FPauseUntil := 0.00;
   BorderStyle := bsNone;
 
 {$IFDEF RELEASE}
@@ -142,6 +180,7 @@ begin
   WindowState := TWindowState.wsMinimized;
   Visible := False;
   ShowWindow(Handle, SW_HIDE);
+  FPauseUntil := 0.00;
 
   FMouseDistance.Clear;
 end;
@@ -164,10 +203,13 @@ begin
     var LLastInput: TLastInputInfo;
     LLastInput.cbSize := SizeOf(TLastInputInfo);
 
-    GetLastInputInfo(LLastInput);
+    if IsZero(FPauseUntil) or (Now > FPauseUntil) then
+    begin
+      GetLastInputInfo(LLastInput);
 
-    if Abs(GetTickCount - LLastInput.dwTime) > (FSettings.UserIdleTime * 1000) then
-      StartSavingScreen;
+      if Abs(GetTickCount - LLastInput.dwTime) > (FSettings.UserIdleTime * 1000) then
+        StartSavingScreen;
+    end;
   end;
 end;
 

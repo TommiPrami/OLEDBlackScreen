@@ -206,13 +206,39 @@ object OLBMainForm: TOLBMainForm
   object PopupMenuTrayIcon: TPopupMenu
     Left = 288
     Top = 336
-    object Settings1: TMenuItem
+    object MenuItemPause: TMenuItem
+      Caption = 'Pause'
+      object MenuItemPause10min: TMenuItem
+        Tag = 10
+        AutoCheck = True
+        Caption = '10min'
+        OnClick = MenuItemPauseClick
+      end
+      object MenuItemPause30min: TMenuItem
+        Tag = 30
+        Caption = '30min'
+        OnClick = MenuItemPauseClick
+      end
+      object MenuItemPause45min: TMenuItem
+        Tag = 45
+        AutoCheck = True
+        Caption = '45min'
+        OnClick = MenuItemPauseClick
+      end
+      object MenuItemPause60min: TMenuItem
+        Tag = 60
+        AutoCheck = True
+        Caption = '60min'
+        OnClick = MenuItemPauseClick
+      end
+    end
+    object MenuItemSettings: TMenuItem
       Action = ActionSettings
     end
-    object N1: TMenuItem
+    object MenuItemSeparator: TMenuItem
       Caption = '-'
     end
-    object Exit1: TMenuItem
+    object MenuItemExit: TMenuItem
       Action = ActionClose
       Caption = 'Exit'
     end
