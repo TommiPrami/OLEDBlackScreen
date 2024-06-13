@@ -1,6 +1,8 @@
 object OLBMainForm: TOLBMainForm
   Left = 0
   Top = 0
+  AlphaBlend = True
+  AlphaBlendValue = 0
   BorderIcons = []
   Caption = 'OLBMainForm'
   ClientHeight = 441
@@ -12,6 +14,7 @@ object OLBMainForm: TOLBMainForm
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
+  WindowState = wsMinimized
   OnClose = FormClose
   OnCreate = FormCreate
   OnMouseMove = FormMouseMove
@@ -213,5 +216,11 @@ object OLBMainForm: TOLBMainForm
       Action = ActionClose
       Caption = 'Exit'
     end
+  end
+  object TimerAfterShow: TTimer
+    Interval = 50
+    OnTimer = TimerAfterShowTimer
+    Left = 528
+    Top = 192
   end
 end

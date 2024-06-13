@@ -28,6 +28,7 @@ type
     ActionSettings: TAction;
     N1: TMenuItem;
     Exit1: TMenuItem;
+    TimerAfterShow: TTimer;
     procedure ActionCloseExecute(Sender: TObject);
     procedure ActionStopSavingScreenExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -37,6 +38,7 @@ type
     procedure TrayIconDblClick(Sender: TObject);
     procedure ActionSettingsExecute(Sender: TObject);
     procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure TimerAfterShowTimer(Sender: TObject);
   strict private
     { Private declarations }
     FMouseDistance: TMouseDistance;
@@ -92,11 +94,11 @@ end;
 
 procedure TOLBMainForm.FormCreate(Sender: TObject);
 begin
+  Visible := False;
   LoadSettings(FSettingsFullFilename, FSettings);
 
   FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
   SystemCritical.Start;
-  StopSavingScreen;
 end;
 
 procedure TOLBMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -125,6 +127,9 @@ begin
 {$ENDIF}
 
   FormStyle := fsStayOnTop;
+  Visible := True;
+  AlphaBlendValue := 255;
+  AlphaBlend := False;
   Application.BringToFront;
 
   FMouseDistance.Clear;
@@ -132,9 +137,20 @@ end;
 
 procedure TOLBMainForm.StopSavingScreen;
 begin
+  AlphaBlendValue := 0;
+  AlphaBlend := True;
   WindowState := TWindowState.wsMinimized;
+  Visible := False;
+  ShowWindow(Handle, SW_HIDE);
 
   FMouseDistance.Clear;
+end;
+
+procedure TOLBMainForm.TimerAfterShowTimer(Sender: TObject);
+begin
+  TimerAfterShow.Enabled := False;
+
+  StopSavingScreen;
 end;
 
 procedure TOLBMainForm.TimerTimer(Sender: TObject);
