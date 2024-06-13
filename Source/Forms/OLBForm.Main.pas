@@ -9,10 +9,10 @@ uses
   OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus;
 
 { TODO:
-        Check these:
-         - https://github.com/aehimself/AEFramework/blob/master/AE.Comp.KeepMeAwake.pas
-         - https://stackoverflow.com/questions/2212823/how-to-detect-inactive-user
-         - https://stackoverflow.com/questions/2177513/receive-screensaver-notification
+    Check these:
+      - https://github.com/aehimself/AEFramework/blob/master/AE.Comp.KeepMeAwake.pas
+      - https://stackoverflow.com/questions/2212823/how-to-detect-inactive-user
+      - https://stackoverflow.com/questions/2177513/receive-screensaver-notification
 }
 
 type
@@ -140,7 +140,10 @@ begin
     var LMenuItem := Sender as TMenuItem;
 
     if LMenuItem.Tag > 0 then
+    begin
       PauseFor(LMenuItem.Tag);
+      LMenuItem.Checked := True;
+    end;
   end;
 end;
 
