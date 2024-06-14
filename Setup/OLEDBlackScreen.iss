@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OLED Black Screen"
-#define MyAppVersion "0.1.5.7"
+#define MyAppVersion "0.1.6.8"
 #define MyAppPublisher "Tommi Prami"
 #define MyAppURL "https://github.com/TommiPrami/OLEDBlackScreen"
 #define MyAppExeName "OLEDBlackScreen.exe"
