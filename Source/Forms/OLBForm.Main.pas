@@ -141,15 +141,26 @@ begin
 
     if LMenuItem.Tag > 0 then
     begin
-      PauseFor(LMenuItem.Tag);
-      LMenuItem.Checked := True;
+      if LMenuItem.Checked then
+      begin
+        PauseFor(LMenuItem.Tag);
+        LMenuItem.Checked := True; // Kludge: AutoCheck does not work visually, this fixes it
+      end
+      else
+      begin
+        PauseFor(0);
+        LMenuItem.Checked := False; // Kludge: AutoCheck does not work visually, this fixes it
+      end;
     end;
   end;
 end;
 
 procedure TOLBMainForm.PauseFor(const AMinutesToPause: Integer);
 begin
-  FPauseUntil := IncMinute(Now, AMinutesToPause);
+  if AMinutesToPause > 0 then
+    FPauseUntil := IncMinute(Now, AMinutesToPause)
+  else
+    FPauseUntil := 0.00;
 end;
 
 procedure TOLBMainForm.StartSavingScreen;
