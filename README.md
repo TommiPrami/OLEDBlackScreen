@@ -14,7 +14,7 @@ Starts as minimized to tray. (So if you start this, it seems that nothing happen
   - Double click to the tray icon will bring up settings screen (for now)
 
 ### TODO:
-
+- ~~Make installer, needs tweaking~~
 - ~~Add pause-functionality~~
 - ~~trayincon menu~~
 - ~~most likely right click menu~~
