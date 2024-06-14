@@ -11,7 +11,7 @@ Starts as minimized to tray. (So if you start this, it seems that nothing happen
   - Hide: **Esc**-key
   - Shut Down/Close: **Alt+F4**, **Ctrl+X** and **Ctrl+C**
   - [Rest of the stuff into here]
-  - Double click to the tray icon will bring up settings screen (for now)
+  - Right click to the tray icon for menu (for settings etc)
 
 ### TODO:
 - ~~Make installer, needs tweaking~~
