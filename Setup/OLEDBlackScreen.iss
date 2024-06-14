@@ -13,17 +13,18 @@
 AppId={{B6B78EAC-6109-43ED-901A-AA490F5EBD2E}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\OLEDBlackScreen
+DefaultDirName={commonpf64}\OLEDBlackScreen
 DisableDirPage=yes
 DisableProgramGroupPage=yes
-LicenseFile=C:\git_opensource\TommiPrami\OLEDBlackScreen\LICENSE
+DisableReadyPage=yes
+LicenseFile=..\LICENSE
 ; Remove the following line to run in administrative install mode (install for all users.)
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 OutputBaseFilename=OLEDBlackScreenInstall
 SetupIconFile=..\Assets\Icons\icons8-timer-40.ico
 Compression=lzma2
@@ -42,13 +43,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\Win32\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Win64\Release\{#MyAppExeName}"; DestDir: "{commonpf64}\OLEDBlackScreen"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
