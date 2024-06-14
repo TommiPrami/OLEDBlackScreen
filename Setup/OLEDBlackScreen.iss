@@ -26,8 +26,13 @@ LicenseFile=C:\git_opensource\TommiPrami\OLEDBlackScreen\LICENSE
 PrivilegesRequired=lowest
 OutputBaseFilename=OLEDBlackScreenInstall
 SetupIconFile=..\Assets\Icons\icons8-timer-40.ico
-Compression=lzma
+Compression=lzma2/ultra64
 SolidCompression=yes
+LZMAAlgorithm=1
+LZMAUseSeparateProcess=yes
+LZMADictionarySize=1048576
+LZMANumBlockThreads=1
+LZMANumFastBytes=192
 WizardStyle=modern
 
 [Languages]
