@@ -10,7 +10,6 @@ Starts as minimized to tray. (So if you start this, it seems that nothing happen
 ### Usage:
   - Hide: **Esc**-key
   - Shut Down/Close: **Alt+F4**, **Ctrl+X** and **Ctrl+C**
-  - [Rest of the stuff into here]
   - Right click to the tray icon for menu (for settings etc)
 
 ### TODO:
