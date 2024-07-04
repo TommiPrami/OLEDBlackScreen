@@ -48,6 +48,8 @@ Source: "..\Win64\Release\{#MyAppExeName}"; DestDir: "{commonpf64}\OLEDBlackScre
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"
+; TODO: Some condition and checkbox to the installer GUI for the autorun
+Name: "{commonstartup}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
