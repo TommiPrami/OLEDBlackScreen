@@ -5,6 +5,7 @@ interface
 uses
   OBSUnit.Types;
 
+  function GetSecondsSinceLastInput: Integer;
   function GetDefaultSettingsFilename: string;
   procedure LoadSettingsFromFile(const ASettingsFullFilename: string; var ASettings: TSettings);
   procedure LoadSettings(var ASettingsFullFilename: string; var ASettings: TSettings);
@@ -13,7 +14,18 @@ uses
 implementation
 
 uses
-  System.Classes, System.IOUtils, System.SysUtils, Grijjy.Bson, Grijjy.Bson.IO, Grijjy.Bson.Serialization;
+  Winapi.Windows, System.Classes, System.IOUtils, System.SysUtils, Grijjy.Bson, Grijjy.Bson.IO, Grijjy.Bson.Serialization;
+
+function GetSecondsSinceLastInput: Integer;
+var
+  LLastInput: TLastInputInfo;
+begin
+  LLastInput.cbSize := SizeOf(TLastInputInfo);
+
+  GetLastInputInfo(LLastInput);
+
+  Result := Abs(GetTickCount - LLastInput.dwTime) div 1000;
+end;
 
 function GetDefaultSettingsFilename: string;
 begin

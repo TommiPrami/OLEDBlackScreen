@@ -6,7 +6,7 @@ object OLBMainForm: TOLBMainForm
   BorderIcons = []
   Caption = 'OLBMainForm'
   ClientHeight = 441
-  ClientWidth = 624
+  ClientWidth = 774
   Color = clBlack
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -20,6 +20,23 @@ object OLBMainForm: TOLBMainForm
   OnMouseMove = FormMouseMove
   OnMouseUp = FormMouseUp
   TextHeight = 15
+  object LabelDebug: TLabel
+    AlignWithMargins = True
+    Left = 3
+    Top = 3
+    Width = 768
+    Height = 233
+    Align = alTop
+    AutoSize = False
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWhite
+    Font.Height = -15
+    Font.Name = 'Segoe UI'
+    Font.Style = []
+    ParentFont = False
+    Transparent = False
+    WordWrap = True
+  end
   object ActionList: TActionList
     Left = 440
     Top = 112

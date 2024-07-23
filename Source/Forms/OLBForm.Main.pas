@@ -6,7 +6,8 @@ uses
   Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.Diagnostics, System.ImageList,
   System.SysUtils, System.Variants, System.Win.TaskbarCore, Vcl.ActnList, Vcl.BaseImageCollection, Vcl.Controls,
   Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.ImgList, Vcl.StdActns, Vcl.Taskbar, Vcl.VirtualImageList,
-  OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus;
+  OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus,
+  Vcl.StdCtrls;
 
 { TODO:
     Check these:
@@ -22,6 +23,7 @@ type
     ActionSettings: TAction;
     ActionStopSavingScreen: TAction;
     ImageListTrayIcon: TImageList;
+    LabelDebug: TLabel;
     MenuItemExit: TMenuItem;
     MenuItemPause: TMenuItem;
     MenuItemPause10min: TMenuItem;
@@ -46,19 +48,18 @@ type
     procedure TimerTimer(Sender: TObject);
     procedure TrayIconDblClick(Sender: TObject);
   strict private
-    { Private declarations }
     FMouseDistance: TMouseDistance;
+    FPauseUntil: TDateTime;
     FSettings: TSettings;
     FSettingsFullFilename: string;
-    FPauseUntil: TDateTime;
+    procedure GetRidOfCheckedPauseMenu;
+    procedure HideForm;
+    procedure PauseFor(const AMinutesToPause: Integer);
+    procedure ShowForm;
     procedure StartSavingScreen;
     procedure StopSavingScreen;
-    procedure PauseFor(const AMinutesToPause: Integer);
-    procedure GetRidOfCheckedPauseMenu;
   protected
     procedure CreateParams(var AParams: TCreateParams); override;
-  public
-    { Public declarations }
   end;
 
 var
@@ -103,12 +104,14 @@ end;
 
 procedure TOLBMainForm.FormCreate(Sender: TObject);
 begin
-  Visible := False;
+  FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
   FPauseUntil := 0.00;
+
+  LabelDebug.Visible := {$IFDEF DEBUG}True{$ELSE}False{$ENDIF};
+  Visible := LabelDebug.Visible;
 
   LoadSettings(FSettingsFullFilename, FSettings);
 
-  FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
   SystemCritical.Start;
 end;
 
@@ -133,6 +136,17 @@ begin
       MenuItemPause.Items[LIndex].Checked := False;
 end;
 
+procedure TOLBMainForm.HideForm;
+begin
+  {$IFDEF RELEASE}
+  AlphaBlendValue := 0;
+  AlphaBlend := True;
+  WindowState := TWindowState.wsMinimized;
+  Visible := False;
+  ShowWindow(Handle, SW_HIDE);
+  {$ENDIF}
+end;
+
 procedure TOLBMainForm.MenuItemPauseClick(Sender: TObject);
 begin
   if Sender is TMenuItem then
@@ -143,13 +157,13 @@ begin
     begin
       if LMenuItem.Checked then
       begin
+        LMenuItem.Checked := True; // Kludge: AutoCheck does not work visually, this shold fix it
         PauseFor(LMenuItem.Tag);
-        LMenuItem.Checked := True; // Kludge: AutoCheck does not work visually, this fixes it
       end
       else
       begin
+        GetRidOfCheckedPauseMenu;
         PauseFor(0);
-        LMenuItem.Checked := False; // Kludge: AutoCheck does not work visually, this fixes it
       end;
     end;
   end;
@@ -163,37 +177,31 @@ begin
     FPauseUntil := 0.00;
 end;
 
-procedure TOLBMainForm.StartSavingScreen;
+procedure TOLBMainForm.ShowForm;
 begin
-  if not IsZero(FPauseUntil) then
-    GetRidOfCheckedPauseMenu;
-
-  FPauseUntil := 0.00;
   BorderStyle := bsNone;
-
-{$IFDEF RELEASE}
-  // For now only in release version because iy ids too easy to paint your self into the corner with this
-  WindowState := TWindowState.wsMaximized;
-{$ELSE}
-  WindowState := TWindowState.wsNormal;
-{$ENDIF}
+  WindowState := {$IFDEF RELEASE}TWindowState.wsMaximized{$ELSE}TWindowState.wsNormal{$ENDIF};
 
   FormStyle := fsStayOnTop;
   Visible := True;
   AlphaBlendValue := 255;
   AlphaBlend := False;
+
+  // Last step
   Application.BringToFront;
+end;
+
+procedure TOLBMainForm.StartSavingScreen;
+begin
+  ShowForm;
 
   FMouseDistance.Clear;
 end;
 
 procedure TOLBMainForm.StopSavingScreen;
 begin
-  AlphaBlendValue := 0;
-  AlphaBlend := True;
-  WindowState := TWindowState.wsMinimized;
-  Visible := False;
-  ShowWindow(Handle, SW_HIDE);
+  HideForm;
+
   FPauseUntil := 0.00;
 
   FMouseDistance.Clear;
@@ -204,26 +212,71 @@ begin
   TimerAfterShow.Enabled := False;
 
   StopSavingScreen;
+
+  {$IFDEF DEBUG}
+  ShowForm;
+  Left := Screen.MonitorFromWindow(Handle).Width div 6;
+  Top := Screen.MonitorFromWindow(Handle).Height div 6;
+  {$ENDIF};
 end;
 
 procedure TOLBMainForm.TimerTimer(Sender: TObject);
+
+  {$IFDEF DEBUG}
+  procedure AddDebugLine(const ADebugLine: string);
+  begin
+    LabelDebug.Caption := LabelDebug.Caption + sLineBreak + ADebugLine;
+  end;
+  {$ENDIF}
+
 begin
+  {$IFDEF DEBUG}
+  LabelDebug.Caption := '';
+  {$ENDIF}
+
+  if TimerAfterShow.Enabled then
+    Exit;
+
+  if (FPauseUntil < 0.00) or (not IsZero(FPauseUntil) and (Now > FPauseUntil)) then
+  begin
+    GetRidOfCheckedPauseMenu;
+    FPauseUntil := 0.00;
+  end;
+
   if WindowState = TWindowState.wsMaximized then
   begin
     // Do something for the teams and shit...
   end
   else
   begin
-    var LLastInput: TLastInputInfo;
-    LLastInput.cbSize := SizeOf(TLastInputInfo);
-
-    if IsZero(FPauseUntil) or (Now > FPauseUntil) then
+    if IsZero(FPauseUntil) then
     begin
-      GetLastInputInfo(LLastInput);
+      var LTImeToScreenSaving := FSettings.UserIdleTime - GetSecondsSinceLastInput;
 
-      if Abs(GetTickCount - LLastInput.dwTime) > (FSettings.UserIdleTime * 1000) then
+      if LTImeToScreenSaving <= 0 then
+      begin
         StartSavingScreen;
+
+        {$IFDEF DEBUG}
+        AddDebugLine('Saving screen...');
+        {$ENDIF}
+      end
+      else
+      begin
+        {$IFDEF DEBUG}
+        AddDebugLine('Time to saving screen: ' + LTImeToScreenSaving.ToString);
+        {$ENDIF}
+      end;
+    end
+    {$IFDEF DEBUG}
+    else
+    begin
+      var LPauseTimeLeft: TDateTime := Now - FPauseUntil;
+
+      AddDebugLine('Paused...');
+      AddDebugLine('  - Paused for ' + TimeToStr(LPauseTimeLeft));
     end;
+    {$ENDIF}
   end;
 end;
 
