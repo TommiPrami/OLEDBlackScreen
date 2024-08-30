@@ -13,10 +13,12 @@ object OLBMainForm: TOLBMainForm
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  KeyPreview = True
   Position = poScreenCenter
   WindowState = wsMinimized
   OnClose = FormClose
   OnCreate = FormCreate
+  OnKeyUp = FormKeyUp
   OnMouseMove = FormMouseMove
   OnMouseUp = FormMouseUp
   TextHeight = 15
@@ -233,6 +235,7 @@ object OLBMainForm: TOLBMainForm
       end
       object MenuItemPause30min: TMenuItem
         Tag = 30
+        AutoCheck = True
         Caption = '30min'
         OnClick = MenuItemPauseClick
       end

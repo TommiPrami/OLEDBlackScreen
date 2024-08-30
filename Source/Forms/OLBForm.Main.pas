@@ -47,11 +47,13 @@ type
     procedure TimerAfterShowTimer(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
     procedure TrayIconDblClick(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
   strict private
     FMouseDistance: TMouseDistance;
     FPauseUntil: TDateTime;
     FSettings: TSettings;
     FSettingsFullFilename: string;
+    procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
     procedure GetRidOfCheckedPauseMenu;
     procedure HideForm;
     procedure PauseFor(const AMinutesToPause: Integer);
@@ -89,6 +91,16 @@ begin
   StopSavingScreen;
 end;
 
+procedure TOLBMainForm.AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
+begin
+  {$IFDEF DEBUG}
+  if AClear then
+    LabelDebug.Caption := '';
+
+  LabelDebug.Caption := LabelDebug.Caption + sLineBreak + ADebugLine;
+  {$ENDIF}
+end;
+
 procedure TOLBMainForm.CreateParams(var AParams: TCreateParams);
 begin
   inherited;
@@ -113,6 +125,12 @@ begin
   LoadSettings(FSettingsFullFilename, FSettings);
 
   SystemCritical.Start;
+end;
+
+procedure TOLBMainForm.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key in [Ord('A')..Ord('Z'), VK_SPACE] then
+    ActionStopSavingScreen.Execute;
 end;
 
 procedure TOLBMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -144,6 +162,8 @@ begin
   WindowState := TWindowState.wsMinimized;
   Visible := False;
   ShowWindow(Handle, SW_HIDE);
+  {$ELSE}
+  AddDebugLine('Hide Form...', True);
   {$ENDIF}
 end;
 
@@ -221,18 +241,8 @@ begin
 end;
 
 procedure TOLBMainForm.TimerTimer(Sender: TObject);
-
-  {$IFDEF DEBUG}
-  procedure AddDebugLine(const ADebugLine: string);
-  begin
-    LabelDebug.Caption := LabelDebug.Caption + sLineBreak + ADebugLine;
-  end;
-  {$ENDIF}
-
 begin
-  {$IFDEF DEBUG}
-  LabelDebug.Caption := '';
-  {$ENDIF}
+  AddDebugLine('', True);
 
   if TimerAfterShow.Enabled then
     Exit;
@@ -257,16 +267,10 @@ begin
       begin
         StartSavingScreen;
 
-        {$IFDEF DEBUG}
         AddDebugLine('Saving screen...');
-        {$ENDIF}
       end
       else
-      begin
-        {$IFDEF DEBUG}
         AddDebugLine('Time to saving screen: ' + LTImeToScreenSaving.ToString);
-        {$ENDIF}
-      end;
     end
     {$IFDEF DEBUG}
     else
