@@ -9,7 +9,7 @@ uses
 type
   TOLBSettingsForm = class(TForm)
     ActionCancel: TAction;
-    ActionList1: TActionList;
+    ActionList: TActionList;
     ActionOK: TAction;
     ButtonCancel: TButton;
     ButtonOK: TButton;

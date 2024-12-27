@@ -130,7 +130,7 @@ object OLBSettingsForm: TOLBSettingsForm
       end
     end
   end
-  object ActionList1: TActionList
+  object ActionList: TActionList
     Left = 360
     Top = 8
     object ActionOK: TAction
