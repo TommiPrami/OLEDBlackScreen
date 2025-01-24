@@ -5,6 +5,10 @@ interface
 uses
   OBSUnit.Types;
 
+{$IF NOT Defined(DEBUG)}
+  procedure DoNothing;
+{$ENDIF}
+
   function GetSecondsSinceLastInput: Integer;
   function GetDefaultSettingsFilename: string;
   procedure LoadSettingsFromFile(const ASettingsFullFilename: string; var ASettings: TSettings);
@@ -15,6 +19,13 @@ implementation
 
 uses
   Winapi.Windows, System.Classes, System.IOUtils, System.SysUtils, Grijjy.Bson, Grijjy.Bson.IO, Grijjy.Bson.Serialization;
+
+{$IF NOT Defined(DEBUG)}
+procedure DoNothing;
+asm
+  nop
+end;
+{$ENDIF}
 
 function GetSecondsSinceLastInput: Integer;
 var

@@ -91,13 +91,15 @@ begin
   StopSavingScreen;
 end;
 
-procedure TOLBMainForm.AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
+procedure TOLBMainForm.AddDebugLine(const ADebugLine: string; const AClear: Boolean = False); //FI:O804
 begin
   {$IFDEF DEBUG}
   if AClear then
     LabelDebug.Caption := '';
 
   LabelDebug.Caption := LabelDebug.Caption + sLineBreak + ADebugLine;
+  {$ELSE}
+  DoNothing;
   {$ENDIF}
 end;
 
