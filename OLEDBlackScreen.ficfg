@@ -83,7 +83,7 @@
 		<Rule805 enabled="true"/>
 	</Rules>
 	<General>
-		<IncludeSearchPath>true</IncludeSearchPath>
-		<HintOnUselessIgnoreComment>true</HintOnUselessIgnoreComment>
+		<IncludeSearchPath>false</IncludeSearchPath>
+		<HintOnUselessIgnoreComment>false</HintOnUselessIgnoreComment>
 		<IgnoreFileNames/></General>
 </FixInsightSettings>
