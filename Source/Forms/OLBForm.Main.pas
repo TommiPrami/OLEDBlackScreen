@@ -14,6 +14,22 @@ uses
       - https://github.com/aehimself/AEFramework/blob/master/AE.Comp.KeepMeAwake.pas
       - https://stackoverflow.com/questions/2212823/how-to-detect-inactive-user
       - https://stackoverflow.com/questions/2177513/receive-screensaver-notification
+      - https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput WinAPI
+
+          Master Reke Example
+
+          rInputs.dwType = INPUT_MOUSE
+          rInputs.DX = 10
+          rInputs.DY = 10
+          rInputs.dwFlags = MOUSEEVENTF_MOVE
+          rInputs.dwTime = GetTickCount
+          iCnt = SendInput(1, rInputs, Len(rInputs))
+          Sleep 300
+          rInputs.DX = -10
+          rInputs.DY = -10
+          rInputs.dwFlags = MOUSEEVENTF_MOVE
+          rInputs.dwTime = GetTickCount
+          iCnt = SendInput(1, rInputs, Len(rInputs))
 }
 
 type
