@@ -69,7 +69,12 @@ type
     FPauseUntil: TDateTime;
     FSettings: TSettings;
     FSettingsFullFilename: string;
+    FMaxIdleMoveDistance: Integer;
+    FMinIdeMouseMoveInterval: Double; // Seconds
+    FIdleWatch: TStopwatch;
+    FSavingScreen: Boolean;
     procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
+    procedure CalculateIdleMouseMoveDistanceAndTime;
     procedure GetRidOfCheckedPauseMenu;
     procedure HideForm;
     procedure PauseFor(const AMinutesToPause: Integer);
@@ -119,6 +124,18 @@ begin
   {$ENDIF}
 end;
 
+procedure TOLBMainForm.CalculateIdleMouseMoveDistanceAndTime;
+const
+  MOUSE_MOVE_GRANULARITY = 10;
+begin
+  FMaxIdleMoveDistance :=  Round(FSettings.MouseMoveDistance / MOUSE_MOVE_GRANULARITY);
+  FMinIdeMouseMoveInterval := FSettings.MouseMoveResetTime / 3;
+  FIdleWatch := TStopwatch.Create;
+
+  FIdleWatch.Stop;
+  FIdleWatch.Reset;
+end;
+
 procedure TOLBMainForm.CreateParams(var AParams: TCreateParams);
 begin
   inherited;
@@ -141,6 +158,7 @@ begin
   Visible := LabelDebug.Visible;
 
   LoadSettings(FSettingsFullFilename, FSettings);
+  CalculateIdleMouseMoveDistanceAndTime;
 
   SystemCritical.Start;
 end;
@@ -234,6 +252,7 @@ begin
   ShowForm;
 
   FMouseDistance.Clear;
+  FSavingScreen := True;
 end;
 
 procedure TOLBMainForm.StopSavingScreen;
@@ -243,6 +262,7 @@ begin
   FPauseUntil := 0.00;
 
   FMouseDistance.Clear;
+  FSavingScreen := False;
 end;
 
 procedure TOLBMainForm.TimerAfterShowTimer(Sender: TObject);
@@ -253,9 +273,12 @@ begin
 
   {$IFDEF DEBUG}
   ShowForm;
-  Left := Screen.MonitorFromWindow(Handle).Width div 6;
-  Top := Screen.MonitorFromWindow(Handle).Height div 6;
+  Left := Screen.MonitorFromWindow(Handle).Width div 8;
+  Top := Screen.MonitorFromWindow(Handle).Height div 8;
   {$ENDIF};
+
+  FIdleWatch.Stop;
+  FIdleWatch.Reset;
 end;
 
 procedure TOLBMainForm.TimerTimer(Sender: TObject);
@@ -271,9 +294,27 @@ begin
     FPauseUntil := 0.00;
   end;
 
-  if WindowState = TWindowState.wsMaximized then
+  if FSavingScreen then
   begin
+    if not FIdleWatch.IsRunning then
+      FIdleWatch := TStopwatch.StartNew;
+
+    if FIdleWatch.Elapsed.TotalSeconds > FMinIdeMouseMoveInterval then
+    begin
     // Do something for the teams and shit...
+      var LInput: TInput;
+      var LMaxMoveDistance := ((FMaxIdleMoveDistance div 2) div 4);
+
+      LInput.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
+      LInput.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
+      LInput.mi.time := GetTickCount;
+      LInput.mi.dwFlags := MOUSEEVENTF_MOVE;
+
+      if SendInput(1, LInput, SizeOf(TInput)) = 1 then
+        LabelDebug.Caption := 'Move mouse: X=' + LInput.mi.dx.ToString + ' Y=' + LInput.mi.dy.ToString;
+
+      FIdleWatch := TStopwatch.StartNew;
+    end;
   end
   else
   begin
