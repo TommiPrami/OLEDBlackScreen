@@ -273,8 +273,8 @@ begin
 
   {$IFDEF DEBUG}
   ShowForm;
-  Left := Screen.MonitorFromWindow(Handle).Width div 8;
-  Top := Screen.MonitorFromWindow(Handle).Height div 8;
+  Left := Round(Screen.MonitorFromWindow(Handle).Width * 0.07);
+  Top := Round(Screen.MonitorFromWindow(Handle).Height * 0.07);
   {$ENDIF};
 
   FIdleWatch.Stop;
@@ -303,8 +303,10 @@ begin
     begin
     // Do something for the teams and shit...
       var LInput: TInput;
+      FillChar(LInput, SizeOf(TInput), 0);
       var LMaxMoveDistance := ((FMaxIdleMoveDistance div 2) div 4);
 
+      LInput.Itype := INPUT_MOUSE;
       LInput.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
       LInput.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
       LInput.mi.time := GetTickCount;
