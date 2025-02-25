@@ -75,6 +75,7 @@ type
     FSavingScreen: Boolean;
     procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
     procedure CalculateIdleMouseMoveDistanceAndTime;
+    function GetRandomMouseInput: TInput;
     procedure GetRidOfCheckedPauseMenu;
     procedure HideForm;
     procedure PauseFor(const AMinutesToPause: Integer);
@@ -181,6 +182,19 @@ begin
     PopupMenuTrayIcon.Popup(X, Y)
   else
     StopSavingScreen;
+end;
+
+function TOLBMainForm.GetRandomMouseInput: TInput;
+begin
+  FillChar(Result, SizeOf(TInput), 0);
+
+  var LMaxMoveDistance := ((FMaxIdleMoveDistance div 2) div 4);
+
+  Result.Itype := INPUT_MOUSE;
+  Result.mi.dwFlags := MOUSEEVENTF_MOVE;
+  Result.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
+  Result.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
+  Result.mi.time := GetTickCount;
 end;
 
 procedure TOLBMainForm.GetRidOfCheckedPauseMenu;
@@ -301,19 +315,16 @@ begin
 
     if FIdleWatch.Elapsed.TotalSeconds > FMinIdeMouseMoveInterval then
     begin
-    // Do something for the teams and shit...
-      var LInput: TInput;
-      FillChar(LInput, SizeOf(TInput), 0);
-      var LMaxMoveDistance := ((FMaxIdleMoveDistance div 2) div 4);
-
-      LInput.Itype := INPUT_MOUSE;
-      LInput.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
-      LInput.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
-      LInput.mi.time := GetTickCount;
-      LInput.mi.dwFlags := MOUSEEVENTF_MOVE;
+      var LInput := GetRandomMouseInput;
 
       if SendInput(1, LInput, SizeOf(TInput)) = 1 then
+      begin
+        FMouseDistance.SubstractMouseOffset(LInput.mi.dx, LInput.mi.dy);
+
+        {$IFDEF DEBUG}
         LabelDebug.Caption := 'Move mouse: X=' + LInput.mi.dx.ToString + ' Y=' + LInput.mi.dy.ToString;
+        {$ENDIF}
+      end;
 
       FIdleWatch := TStopwatch.StartNew;
     end;
