@@ -14,7 +14,7 @@ type
   strict private
     MouseMoveResetTime: Integer;
     SubstractMOuseDistance: Double;
-    function CalculateDistance(const AX, AY: Integer): Double;
+    function CalculateDistance(const AX, AY, ALastX, ALastY: Integer): Double;
   public
     IdleMouseDistance: Double;
     LastX: Integer;
@@ -58,7 +58,7 @@ begin
       Clear
     else
     begin
-      IdleMouseDistance := IdleMouseDistance + CalculateDistance(AX, AY);
+      IdleMouseDistance := IdleMouseDistance + CalculateDistance(AX, AY, LastX, LastY);
 
       LastX := AX;
       LastY := AY;
@@ -68,9 +68,12 @@ begin
   Result := Max(IdleMouseDistance - SubstractMOuseDistance, 0.00);
 end;
 
-function TMouseDistance.CalculateDistance(const AX, AY: Integer): Double;
+function TMouseDistance.CalculateDistance(const AX, AY, ALastX, ALastY: Integer): Double;
 begin
-  Result := Abs(Sqrt(Sqr(Ax - LastX) + Sqr(AY - LastY)));
+  var LLastX := ALastX;
+  var LLastY := ALastY;
+
+  Result := Abs(Sqrt(Sqr(Ax - LLastX) + Sqr(AY - LLastY)));
 end;
 
 procedure TMouseDistance.Clear;
@@ -98,7 +101,7 @@ end;
 
 procedure TMouseDistance.SubstractMouseOffset(const ADeltaX, ADeltaY: Integer);
 begin
-  SubstractMOuseDistance := SubstractMOuseDistance + CalculateDistance(ADeltaX, ADeltaY);
+  SubstractMOuseDistance := SubstractMOuseDistance + CalculateDistance(ADeltaX, ADeltaY,  0, 0);
 end;
 
 { TSettings }
