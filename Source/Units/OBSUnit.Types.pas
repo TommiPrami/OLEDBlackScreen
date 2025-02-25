@@ -14,13 +14,12 @@ type
   strict private
     MouseMoveResetTime: Integer;
     SubstractMOuseDistance: Double;
-    function CalculateDistance(const AX, AY, ALastX, ALastY: Integer): Double;
-  public
     IdleMouseDistance: Double;
     LastX: Integer;
     LastY: Integer;
     MouseStopWatch: TStopWatch;
-
+    function CalculateDistance(const AX, AY, ALastX, ALastY: Integer): Double;
+  public
     constructor Create(const AMouseMoveResetTime: Integer);
     procedure Clear;
     procedure ResetTimeout;
