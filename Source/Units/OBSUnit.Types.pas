@@ -13,7 +13,7 @@ type
   TMouseDistance = record
   strict private
     MouseMoveResetTime: Integer;
-    SubstractMOuseDistance: Double;
+    SubtractMouseDistance: Double;
     IdleMouseDistance: Double;
     LastX: Integer;
     LastY: Integer;
@@ -24,7 +24,7 @@ type
     procedure Clear;
     procedure ResetTimeout;
     function AddCoordinate(const AX, AY: Integer): Double;
-    procedure SubstractMouseOffset(const ADeltaX, ADeltaY: Integer);
+    procedure SubtractMouseOffset(const ADeltaX, ADeltaY: Integer);
   end;
 
   TSettings = record
@@ -64,7 +64,7 @@ begin
     end;
   end;
 
-  Result := Max(IdleMouseDistance - SubstractMOuseDistance, 0.00);
+  Result := Max(IdleMouseDistance - SubtractMOuseDistance, 0.00);
 end;
 
 function TMouseDistance.CalculateDistance(const AX, AY, ALastX, ALastY: Integer): Double;
@@ -78,7 +78,7 @@ end;
 procedure TMouseDistance.Clear;
 begin
   IdleMouseDistance := 0.00;
-  SubstractMOuseDistance := 0.00;
+  SubtractMouseDistance := 0.00;
   LastX := 0;
   LAstY := 0;
 
@@ -98,9 +98,9 @@ begin
   MouseStopWatch.Reset;
 end;
 
-procedure TMouseDistance.SubstractMouseOffset(const ADeltaX, ADeltaY: Integer);
+procedure TMouseDistance.SubtractMouseOffset(const ADeltaX, ADeltaY: Integer);
 begin
-  SubstractMOuseDistance := SubstractMOuseDistance + CalculateDistance(ADeltaX, ADeltaY,  0, 0);
+  SubtractMouseDistance := SubtractMouseDistance + CalculateDistance(ADeltaX, ADeltaY,  0, 0);
 end;
 
 { TSettings }

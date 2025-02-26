@@ -306,7 +306,7 @@ begin
 
       if SendInput(1, LInput, SizeOf(TInput)) = 1 then
       begin
-        FMouseDistance.SubstractMouseOffset(LInput.mi.dx, LInput.mi.dy);
+        FMouseDistance.SubtractMouseOffset(LInput.mi.dx, LInput.mi.dy);
 
         {$IFDEF DEBUG}
         LabelDebug.Caption := 'Move mouse: X=' + LInput.mi.dx.ToString + ' Y=' + LInput.mi.dy.ToString;
