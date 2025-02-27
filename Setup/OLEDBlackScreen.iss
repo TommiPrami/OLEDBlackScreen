@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "OLED Black Screen"
-#define MyAppVersion "0.4.9.12"
+#define MyAppVersion "0.5.10.13"
 #define MyAppPublisher "Tommi Prami"
 #define MyAppURL "https://github.com/TommiPrami/OLEDBlackScreen"
 #define MyAppExeName "OLEDBlackScreen.exe"
@@ -27,13 +27,14 @@ LicenseFile=..\LICENSE
 PrivilegesRequired=admin
 OutputBaseFilename=OLEDBlackScreenInstall
 SetupIconFile=..\Assets\Icons\icons8-timer-40.ico
-Compression=lzma2
+; Compression settings
+Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAAlgorithm=1
 LZMAUseSeparateProcess=yes
 LZMADictionarySize=948576
 LZMANumBlockThreads=1
-LZMANumFastBytes=64
+LZMANumFastBytes=192
 WizardStyle=modern
 
 [Languages]
