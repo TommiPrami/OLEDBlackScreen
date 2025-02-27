@@ -1,7 +1,7 @@
 object OLBSettingsForm: TOLBSettingsForm
   Left = 0
   Top = 0
-  Caption = 'OLBSettingsForm'
+  Caption = 'OLED Black Screen Settings'
   ClientHeight = 323
   ClientWidth = 426
   Color = clWindow
@@ -81,7 +81,7 @@ object OLBSettingsForm: TOLBSettingsForm
       object LabelMopuseMoveDIstanceUnit: TLabel
         Left = 136
         Top = 77
-        Width = 30
+        Width = 29
         Height = 15
         Caption = 'pixels'
       end
@@ -91,6 +91,17 @@ object OLBSettingsForm: TOLBSettingsForm
         Width = 43
         Height = 15
         Caption = 'seconds'
+      end
+      object LabelVersion: TLabel
+        AlignWithMargins = True
+        Left = 8
+        Top = 262
+        Width = 410
+        Height = 15
+        Margins.Left = 8
+        Margins.Right = 8
+        Align = alBottom
+        Caption = 'Version: '
       end
       object LabeledEditMouseMoveDistance: TLabeledEdit
         Left = 8
