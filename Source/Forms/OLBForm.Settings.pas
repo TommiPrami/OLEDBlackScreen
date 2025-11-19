@@ -45,7 +45,7 @@ implementation
 
 { TOLBSettingsForm }
 
-// TODO: Maybe these version stuff wold be nice to have in some common place
+// TODO: Maybe these version stuff would be nice to have in some common place
 procedure GetFileVersion(const AFileName: string; var AMajor, AMinor, ARelease, ABuild: Integer);
 var
   LBuffer: TBytes;
