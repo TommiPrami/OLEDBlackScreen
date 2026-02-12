@@ -17,6 +17,7 @@ uses
       - https://stackoverflow.com/questions/2177513/receive-screensaver-notification
       - Possibly add some random char sensing also with SendInput API
         - Maybe in  same time to add some randomness to the mouse time also...
+    - Some timeout, to let system to LogOut, and is there way to tell monitor to go to the "power saving mode" in that case, so screen would not be static
 }
 
 type
