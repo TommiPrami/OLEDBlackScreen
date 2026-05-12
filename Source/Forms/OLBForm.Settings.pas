@@ -133,7 +133,7 @@ begin
     if Result = mrOk then
       ASettings := OLBSettingsForm.Settings;
   finally
-    OLBSettingsForm.Release
+    OLBSettingsForm.Release;
   end;
 end;
 

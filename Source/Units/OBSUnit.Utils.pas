@@ -57,7 +57,7 @@ begin
     LReader := TgoJsonReader.Load(ASettingsFullFilename);
 
     TgoBsonSerializer.Deserialize<TSettings>(LReader, ASettings);
-  end
+  end;
 end;
 
 procedure LoadSettings(var ASettingsFullFilename: string; var ASettings: TSettings);
