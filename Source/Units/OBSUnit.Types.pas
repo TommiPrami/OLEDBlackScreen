@@ -6,8 +6,8 @@ uses
   System.Diagnostics;
 
 const
-  SETTINGS_SUB_DIR = 'OLEDBlaskScreen';
-  SETTINGS_FILENAME = SETTINGS_SUB_DIR + 'Settings.json';
+  SETTINGS_SUB_DIR = 'OLEDBlackScreen';
+  SETTINGS_FILENAME = 'Settings.json';
 
 type
   TMouseDistance = record

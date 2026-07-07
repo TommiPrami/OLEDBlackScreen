@@ -78,7 +78,7 @@ object OLBSettingsForm: TOLBSettingsForm
         Height = 15
         Caption = 'seconds'
       end
-      object LabelMopuseMoveDIstanceUnit: TLabel
+      object LabelMouseMoveDistanceUnit: TLabel
         Left = 136
         Top = 77
         Width = 29
@@ -111,7 +111,6 @@ object OLBSettingsForm: TOLBSettingsForm
         EditLabel.Width = 116
         EditLabel.Height = 15
         EditLabel.Caption = 'Mouse move distance'
-        NumbersOnly = True
         TabOrder = 1
         Text = ''
       end

@@ -3,8 +3,8 @@
 interface
 
 uses
-  Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.SysUtils, System.Variants, Vcl.ActnList,
-  Vcl.Controls, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.Mask, Vcl.StdCtrls, OBSUnit.Types;
+  Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.SysUtils, System.UITypes, System.Variants,
+  Vcl.ActnList, Vcl.Controls, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.Mask, Vcl.StdCtrls, OBSUnit.Types;
 
 type
   TOLBSettingsForm = class(TForm)
@@ -16,7 +16,7 @@ type
     LabeledEditMouseMoveDistance: TLabeledEdit;
     LabeledEditMouseMoveResetTime: TLabeledEdit;
     LabeledEditUserIdleTime: TLabeledEdit;
-    LabelMopuseMoveDIstanceUnit: TLabel;
+    LabelMouseMoveDistanceUnit: TLabel;
     LabelMouseMoveResetTimeUnit: TLabel;
     LabelUserIdleTimeUnit: TLabel;
     PanelButtons: TPanel;
@@ -99,19 +99,13 @@ begin
 end;
 
 procedure TOLBSettingsForm.ActionOKExecute(Sender: TObject);
-var
-  LActiveControl: TWinControl;
 begin
-  LActiveControl := ActiveControl;
-  try
-    SetFocusedControl(ButtonOK);
+  // Move focus off the active edit so its content is committed before we validate.
+  SetFocusedControl(ButtonOK);
 
-    if ValidateInput then
-      ModalResult := mrOk;
-  finally
-    if Assigned(LActiveControl) then
-      ActiveControl := LActiveControl;
-  end;
+  if ValidateInput then
+    ModalResult := mrOk;
+  // On failure ValidateInput has already focused the offending edit.
 end;
 
 class function TOLBSettingsForm.ClassCreate(const AOwner: TComponent): TCustomForm;
@@ -134,6 +128,7 @@ begin
       ASettings := OLBSettingsForm.Settings;
   finally
     OLBSettingsForm.Release;
+    OLBSettingsForm := nil; // Release() frees the form but leaves the global dangling; nil it so it can be reopened
   end;
 end;
 
@@ -147,26 +142,33 @@ begin
 end;
 
 function TOLBSettingsForm.ValidateInput: Boolean;
+
+  function FieldError(const AEdit: TCustomEdit; const AFieldName: string): Boolean;
+  begin
+    MessageDlg(Format('Please enter a valid number for "%s".', [AFieldName]), mtError, [mbOK], 0);
+    AEdit.SetFocus;
+
+    Result := False;
+  end;
+
 var
-  LIntValue: Integer;
-  LFloatValue: Double;
+  LUserIdleTime: Integer;
+  LMouseMoveDistance: Double;
+  LMouseMoveResetTime: Integer;
 begin
-  Result := False;
+  // Validate everything first, then commit, so a later failure cannot leave FSettings half-updated.
+  if not TryStrToInt(LabeledEditUserIdleTime.Text, LUserIdleTime) then
+    Exit(FieldError(LabeledEditUserIdleTime, 'User idle time'));
 
-  if TryStrToInt(LabeledEditUserIdleTime.Text, LIntValue) then
-    FSettings.UserIdleTime := LIntValue
-  else
-    Exit;
+  if not TryStrToFloat(LabeledEditMouseMoveDistance.Text, LMouseMoveDistance) then
+    Exit(FieldError(LabeledEditMouseMoveDistance, 'Mouse move distance'));
 
-  if TryStrToFloat(LabeledEditMouseMoveDistance.Text, LFloatValue) then
-    FSettings.MouseMoveDistance := LFloatValue
-  else
-    Exit;
+  if not TryStrToInt(LabeledEditMouseMoveResetTime.Text, LMouseMoveResetTime) then
+    Exit(FieldError(LabeledEditMouseMoveResetTime, 'Mouse move reset time'));
 
-  if TryStrToInt(LabeledEditMouseMoveResetTime.Text, LIntValue) then
-    FSettings.MouseMoveResetTime := LIntValue
-  else
-    Exit;
+  FSettings.UserIdleTime := LUserIdleTime;
+  FSettings.MouseMoveDistance := LMouseMoveDistance;
+  FSettings.MouseMoveResetTime := LMouseMoveResetTime;
 
   Result := True;
 end;

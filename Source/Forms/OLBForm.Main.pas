@@ -45,25 +45,26 @@ type
     procedure ActionStopSavingScreenExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure MenuItemPauseClick(Sender: TObject);
     procedure TimerAfterShowTimer(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
     procedure TrayIconDblClick(Sender: TObject);
-    procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
   strict private
+    FIdleWatch: TStopwatch;
+    FMaxIdleMoveDistance: Integer;
+    FMinIdleMouseMoveInterval: Double; // Seconds
     FMouseDistance: TMouseDistance;
     FPauseUntil: TDateTime;
+    FSavingScreen: Boolean;
     FSettings: TSettings;
     FSettingsFullFilename: string;
-    FMaxIdleMoveDistance: Integer;
-    FMinIdeMouseMoveInterval: Double; // Seconds
-    FIdleWatch: TStopwatch;
-    FSavingScreen: Boolean;
-    procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
-    procedure CalculateIdleMouseMoveDistanceAndTime;
     function GetRandomMouseInput: TInput;
+    procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
+    procedure ApplySettings;
+    procedure CalculateIdleMouseMoveDistanceAndTime;
     procedure GetRidOfCheckedPauseMenu;
     procedure HideForm;
     procedure PauseFor(const AMinutesToPause: Integer);
@@ -93,7 +94,10 @@ procedure TOLBMainForm.ActionSettingsExecute(Sender: TObject);
 begin
   if not Assigned(OLBSettingsForm) then
     if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
+    begin
       WriteSettings(FSettingsFullFilename, FSettings);
+      ApplySettings; // Re-read the cached, derived values so changes take effect without a restart
+    end;
 end;
 
 procedure TOLBMainForm.ActionStopSavingScreenExecute(Sender: TObject);
@@ -113,12 +117,22 @@ begin
   {$ENDIF}
 end;
 
+procedure TOLBMainForm.ApplySettings;
+begin
+  // (Re)build the state derived from FSettings. Safe to call again whenever the settings change.
+  FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
+
+  CalculateIdleMouseMoveDistanceAndTime;
+end;
+
 procedure TOLBMainForm.CalculateIdleMouseMoveDistanceAndTime;
 const
   MOUSE_MOVE_GRANULARITY = 10;
+  // Nudge the mouse a few times per reset window so accumulated jitter never trips the reset timeout.
+  MOUSE_MOVES_PER_RESET_TIME = 3;
 begin
-  FMaxIdleMoveDistance :=  Round(FSettings.MouseMoveDistance / MOUSE_MOVE_GRANULARITY);
-  FMinIdeMouseMoveInterval := FSettings.MouseMoveResetTime / 3;
+  FMaxIdleMoveDistance := Round(FSettings.MouseMoveDistance / MOUSE_MOVE_GRANULARITY);
+  FMinIdleMouseMoveInterval := FSettings.MouseMoveResetTime / MOUSE_MOVES_PER_RESET_TIME;
   FIdleWatch := TStopwatch.Create;
 
   FIdleWatch.Stop;
@@ -140,14 +154,15 @@ end;
 
 procedure TOLBMainForm.FormCreate(Sender: TObject);
 begin
-  FMouseDistance := TMouseDistance.Create(FSettings.MouseMoveResetTime);
+  Randomize; // So GetRandomMouseInput does not produce the same jitter sequence every launch
+
   FPauseUntil := 0.00;
 
   LabelDebug.Visible := {$IFDEF DEBUG}True{$ELSE}False{$ENDIF};
   Visible := LabelDebug.Visible;
 
   LoadSettings(FSettingsFullFilename, FSettings);
-  CalculateIdleMouseMoveDistanceAndTime;
+  ApplySettings; // Must run after LoadSettings so FMouseDistance uses the loaded MouseMoveResetTime
 
   SystemCritical.Start;
 end;
@@ -173,10 +188,12 @@ begin
 end;
 
 function TOLBMainForm.GetRandomMouseInput: TInput;
+const
+  MAX_MOVE_FRACTION = 8; // Keep each nudge to roughly an eighth of the max idle distance
 begin
   FillChar(Result, SizeOf(TInput), 0);
 
-  var LMaxMoveDistance := ((FMaxIdleMoveDistance div 2) div 4);
+  var LMaxMoveDistance := FMaxIdleMoveDistance div MAX_MOVE_FRACTION;
 
   Result.Itype := INPUT_MOUSE;
   Result.mi.dwFlags := MOUSEEVENTF_MOVE;
@@ -213,16 +230,19 @@ begin
 
     if LMenuItem.Tag > 0 then
     begin
-      if LMenuItem.Checked then
+      // AutoCheck has already toggled this item; capture that, then clear every item so the
+      // durations behave like a radio group (only the clicked one can stay checked).
+      var LWasChecked := LMenuItem.Checked;
+
+      GetRidOfCheckedPauseMenu;
+
+      if LWasChecked then
       begin
-        LMenuItem.Checked := True; // Kludge: AutoCheck does not work visually, this shold fix it
+        LMenuItem.Checked := True;
         PauseFor(LMenuItem.Tag);
       end
       else
-      begin
-        GetRidOfCheckedPauseMenu;
         PauseFor(0);
-      end;
     end;
   end;
 end;
@@ -290,7 +310,7 @@ begin
   if TimerAfterShow.Enabled then
     Exit;
 
-  if (FPauseUntil < 0.00) or (not IsZero(FPauseUntil) and (Now > FPauseUntil)) then
+  if not IsZero(FPauseUntil) and (Now > FPauseUntil) then
   begin
     GetRidOfCheckedPauseMenu;
     FPauseUntil := 0.00;
@@ -301,7 +321,7 @@ begin
     if not FIdleWatch.IsRunning then
       FIdleWatch := TStopwatch.StartNew;
 
-    if FIdleWatch.Elapsed.TotalSeconds > FMinIdeMouseMoveInterval then
+    if FIdleWatch.Elapsed.TotalSeconds > FMinIdleMouseMoveInterval then
     begin
       var LInput := GetRandomMouseInput;
 
@@ -321,21 +341,21 @@ begin
   begin
     if IsZero(FPauseUntil) then
     begin
-      var LTImeToScreenSaving := FSettings.UserIdleTime - GetSecondsSinceLastInput;
+      var LTimeToScreenSaving := FSettings.UserIdleTime - GetSecondsSinceLastInput;
 
-      if LTImeToScreenSaving <= 0 then
+      if LTimeToScreenSaving <= 0 then
       begin
         StartSavingScreen;
 
         AddDebugLine('Saving screen...');
       end
       else
-        AddDebugLine('Time to saving screen: ' + LTImeToScreenSaving.ToString);
+        AddDebugLine('Time to saving screen: ' + LTimeToScreenSaving.ToString);
     end
     {$IFDEF DEBUG}
     else
     begin
-      var LPauseTimeLeft: TDateTime := Now - FPauseUntil;
+      var LPauseTimeLeft: TDateTime := FPauseUntil - Now;
 
       AddDebugLine('Paused...');
       AddDebugLine('  - Paused for ' + TimeToStr(LPauseTimeLeft));

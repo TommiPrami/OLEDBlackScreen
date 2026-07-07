@@ -1,24 +1,25 @@
 # OLEDBlackScreen
-Screen saver kind app to save OLED screen (Which blocks ScreenSaver)
 
-[## Work heavily in progress]
+A screensaver-like app that protects OLED screens from burn-in (without blocking the system screensaver the way a static image would).
 
-Idea is to have sleep and screensaver blocking "Screen saver". 
+## Work heavily in progress
 
-Starts as minimized to tray. (So if you start this, it seems that nothing happens, might change later)
+The idea is to keep the display black while still preventing the system from sleeping or starting its own screensaver.
+
+Starts minimized to the tray. (So when you launch it, it looks like nothing happens - that might change later.)
 
 ### Usage:
-  - Hide: **Esc**-key
-  - Shut Down/Close: **Alt+F4**, **Ctrl+X** and **Ctrl+C**
-  - Right click to the tray icon for menu (for settings etc)
+  - Hide: **Esc** key
+  - Shut down/close: **Alt+F4**, **Ctrl+X** and **Ctrl+C**
+  - Right-click the tray icon for the menu (settings etc.)
 
 ### TODO:
 - ~~Make installer, needs tweaking~~
-- ~~Add pause-functionality~~
-- ~~trayincon menu~~
-- ~~most likely right click menu~~
-- ~~Fix Tray Incon (Showns only black)~~
-- ~~Some kind of settinsg screen~~
+- ~~Add pause functionality~~
+- ~~Tray icon menu~~
+- ~~Most likely a right-click menu~~
+- ~~Fix tray icon (showed only black)~~
+- ~~Some kind of settings screen~~
   - ~~Saving and using settings~~
-  - ~~configurable timeouts etc.~~
+  - ~~Configurable timeouts etc.~~
 - ...

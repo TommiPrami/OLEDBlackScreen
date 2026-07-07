@@ -33,9 +33,12 @@ var
 begin
   LLastInput.cbSize := SizeOf(TLastInputInfo);
 
-  GetLastInputInfo(LLastInput);
+  if not GetLastInputInfo(LLastInput) then
+    Exit(0);
 
-  Result := Abs(GetTickCount - LLastInput.dwTime) div 1000;
+  // dwTime shares GetTickCount's 32-bit clock, so this Cardinal subtraction wraps correctly
+  // across the ~49.7-day rollover. (The old Abs() broke that and is not needed.)
+  Result := (GetTickCount - LLastInput.dwTime) div 1000;
 end;
 
 function GetDefaultSettingsFilename: string;
