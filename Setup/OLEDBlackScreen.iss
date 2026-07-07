@@ -56,3 +56,58 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{commonpf64}\OLEDBlackScreen\{#My
 [Run]
 Filename: "{commonpf64}\OLEDBlackScreen\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[Code]
+// -----------------------------------------------------------------------------
+// One-time migration for the misspelled "OLEDBlaskScreen" settings folder.
+//
+// Older builds stored their settings under <userappdata>\OLEDBlaskScreen as
+// "OLEDBlaskScreenSettings.json". The typo was corrected to
+// <userappdata>\OLEDBlackScreen\Settings.json, so move any existing settings
+// across (without clobbering a newer file) and clean up the old folder.
+//
+// This runs in the context of the account running Setup. For an elevated
+// install started by a standard user that is normally still that user's own
+// profile, which is where the app (TPath.GetHomePath) reads/writes settings.
+// -----------------------------------------------------------------------------
+procedure MigrateMisspelledSettingsFolder;
+var
+  OldDir: string;
+  NewDir: string;
+  OldFile: string;
+  NewFile: string;
+begin
+  OldDir := ExpandConstant('{userappdata}\OLEDBlaskScreen');
+
+  // Nothing to do if the misspelled folder was never created.
+  if not DirExists(OldDir) then
+    Exit;
+
+  NewDir := ExpandConstant('{userappdata}\OLEDBlackScreen');
+  OldFile := OldDir + '\OLEDBlaskScreenSettings.json';
+  NewFile := NewDir + '\Settings.json';
+
+  Log('Migrating old settings folder "' + OldDir + '" -> "' + NewDir + '"');
+
+  if not DirExists(NewDir) then
+    ForceDirectories(NewDir);
+
+  if FileExists(OldFile) then
+  begin
+    if FileExists(NewFile) then
+      // The corrected settings already exist, so the old file is only a stale copy.
+      DeleteFile(OldFile)
+    else if not RenameFile(OldFile, NewFile) then
+      Log('Could not move "' + OldFile + '" to "' + NewFile + '"');
+  end;
+
+  // RemoveDir only deletes the folder when it is empty, which is what we want:
+  // leave it in place if anything unexpected is still inside.
+  RemoveDir(OldDir);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    MigrateMisspelledSettingsFolder;
+end;
+
