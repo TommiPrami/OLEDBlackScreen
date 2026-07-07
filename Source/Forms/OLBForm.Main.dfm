@@ -44,9 +44,6 @@ object OLBMainForm: TOLBMainForm
     Top = 112
     object ActionClose: TAction
       Caption = 'ActionClose'
-      SecondaryShortCuts.Strings = (
-        'Ctrl+C'
-        'Ctrl+X')
       ShortCut = 32883
       OnExecute = ActionCloseExecute
     end

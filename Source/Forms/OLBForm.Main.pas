@@ -169,8 +169,10 @@ end;
 
 procedure TOLBMainForm.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  if Key in [Ord('A')..Ord('Z'), VK_SPACE] then
-    ActionStopSavingScreen.Execute;
+  if (Shift = []) and (Key in [Ord('a')..Ord('z'), Ord('A')..Ord('Z'), VK_SPACE]) then
+    ActionStopSavingScreen.Execute
+  else if (Shift = [ssCtrl]) and (Key in [Ord('x'), Ord('z'), Ord('X'), Ord('Z')]) then
+    ActionStopSavingScreen.Execute
 end;
 
 procedure TOLBMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
