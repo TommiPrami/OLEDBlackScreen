@@ -67,6 +67,16 @@ __recovery/
 # Castalia statistics file (since XE7 Castalia is distributed with Delphi)
 *.stat
 
+# DUnitX result files
+dunitx-results.xml
+
 # Boss dependency manager vendor folder https://github.com/HashLoad/boss
 modules/
-*.dsv
+*.filog
+*.sym
+TestInsightSettings.ini
+CodeScanner_MemoryManager_EventLog.txt
+lsif.idx
+Source/.claude/worktrees/nostalgic-torvalds/
+Source/.claude/worktrees/pedantic-lamarr-6ce930/
+/Source/.claude
