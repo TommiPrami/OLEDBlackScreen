@@ -19,6 +19,13 @@ uses
   function TryParseTime(const AText: string; var AMinutes: Integer): Boolean;
   // Formats minutes since midnight back into "HH:MM". Uses FormatSettings.TimeSeparator
   function MinutesToTime(const AMinutes: Integer): string;
+  // Substitutes the locale time separator into a '%s' placeholder, e.g. 'HH%sMM' -> 'HH:MM'.
+  // Text without a '%s' placeholder is returned unchanged.
+  function ApplyTimeSeparator(const ACaption: string): string;
+  // Reads AFileName's version resource. Raises EOSError when the file has no version info.
+  procedure GetFileVersion(const AFileName: string; var AMajor, AMinor, ARelease, ABuild: Integer);
+  // Returns AFileName's version formatted as "Major.Minor.Release.Build".
+  function GetFileVersionStr(const AFileName: string): string;
 
 implementation
 
@@ -152,6 +159,56 @@ function MinutesToTime(const AMinutes: Integer): string;
 begin
   // Use the locale time separator so a loaded value matches the suggested format shown by the edit.
   Result := Format('%.2d%s%.2d', [AMinutes div 60, string(FormatSettings.TimeSeparator), AMinutes mod 60]);
+end;
+
+function ApplyTimeSeparator(const ACaption: string): string;
+begin
+  if ACaption.Contains('%s', True) then
+    Result := Format(ACaption, [string(FormatSettings.TimeSeparator)])
+  else
+    Result := ACaption;
+end;
+
+procedure GetFileVersion(const AFileName: string; var AMajor, AMinor, ARelease, ABuild: Integer);
+var
+  LBuffer: TBytes;
+  LHandle: DWORD;
+  LFixedPtr: PVSFixedFileInfo;
+begin
+  AMajor := 0;
+  AMinor := 0;
+  ARelease := 0;
+  ABuild := 0;
+
+  var LSize := GetFileVersionInfoSize(PChar(AFileName), LHandle);
+
+  if LSize = 0 then
+    RaiseLastOSError;
+
+  SetLength(LBuffer, LSize);
+
+  if not GetFileVersionInfo(PChar(AFileName), LHandle, LSize, LBuffer) then
+    RaiseLastOSError;
+
+  if not VerQueryValue(LBuffer, '\', Pointer(LFixedPtr), LSize) then
+    RaiseLastOSError;
+
+  AMajor := LongRec(LFixedPtr.dwFileVersionMS).Hi;  //major
+  AMinor := LongRec(LFixedPtr.dwFileVersionMS).Lo;  //minor
+  ARelease := LongRec(LFixedPtr.dwFileVersionLS).Hi;  //release
+  ABuild := LongRec(LFixedPtr.dwFileVersionLS).Lo; //build
+end;
+
+function GetFileVersionStr(const AFileName: string): string;
+var
+  LMajor: Integer;
+  LMinor: Integer;
+  LRelease: Integer;
+  LBuild: Integer;
+begin
+  GetFileVersion(AFileName, LMajor, LMinor, LRelease, LBuild);
+
+  Result := Format('%d.%d.%d.%d', [LMajor, LMinor, LRelease, LBuild]);
 end;
 
 end.

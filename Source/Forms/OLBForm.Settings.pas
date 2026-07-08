@@ -68,54 +68,6 @@ uses
 
 { TOLBSettingsForm }
 
-// TODO: Maybe these version stuff would be nice to have in some common place
-procedure GetFileVersion(const AFileName: string; var AMajor, AMinor, ARelease, ABuild: Integer);
-var
-  LBuffer: TBytes;
-  LHandle: DWORD;
-  LFixedPtr: PVSFixedFileInfo;
-begin
-  AMajor := 0;
-  AMinor := 0;
-  ARelease := 0;
-  ABuild := 0;
-
-  var LSize := GetFileVersionInfoSize(PChar(AFileName), LHandle);
-
-  if LSize = 0 then
-    RaiseLastOSError;
-
-  SetLength(LBuffer, LSize);
-
-  if not GetFileVersionInfo(PChar(AFileName), LHandle, LSize, LBuffer) then
-    RaiseLastOSError;
-
-  if not VerQueryValue(LBuffer, '\', Pointer(LFixedPtr), LSize) then
-    RaiseLastOSError;
-
-  AMajor := LongRec(LFixedPtr.dwFileVersionMS).Hi;  //major
-  AMinor := LongRec(LFixedPtr.dwFileVersionMS).Lo;  //minor
-  ARelease := LongRec(LFixedPtr.dwFileVersionLS).Hi;  //release
-  ABuild := LongRec(LFixedPtr.dwFileVersionLS).Lo; //build
-end;
-
-procedure GetAppVersion(var AMajor, AMinor, ARelease, ABuild: Integer);
-begin
-  GetFileVersion(Application.ExeName, AMajor, AMinor, ARelease, ABuild);
-end;
-
-function GetAppVersionStr: string;
-var
-  LMajor: Integer;
-  LMinor: Integer;
-  LRelease: Integer;
-  LBuild: Integer;
-begin
-  GetAppVersion(LMajor, LMinor, LRelease, LBuild);
-
-  Result := Format('%d.%d.%d.%d', [LMajor, LMinor, LRelease, LBuild]);
-end;
-
 procedure TOLBSettingsForm.FormCreate(Sender: TObject);
 begin
   SetTimeFormat(LabeledEditScheduleStart.EditLabel);
@@ -168,8 +120,7 @@ end;
 
 procedure TOLBSettingsForm.SetTimeFormat(const ALabel: TBoundLabel);
 begin
-  if string(ALabel.Caption).Contains('%s', True) then
-    ALabel.Caption := Format(ALabel.Caption, [string(FormatSettings.TimeSeparator)]);
+  ALabel.Caption := ApplyTimeSeparator(ALabel.Caption);
 end;
 
 function TOLBSettingsForm.DayCheckBoxes: TArray<TCheckBox>;
@@ -187,7 +138,7 @@ begin
 
   LoadScheduleControls;
 
-  LabelVersion.Caption := 'Version: ' + GetAppVersionStr;
+  LabelVersion.Caption := 'Version: ' + GetFileVersionStr(Application.ExeName);
 end;
 
 procedure TOLBSettingsForm.LoadScheduleControls;
