@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{BEA738BA-D609-4438-9FC8-EC19DD132712}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="UnitTests\OLEDBlackScreenTests.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OLEDBlackScreen.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OLEDBlackScreenTests">
+        <MSBuild Projects="UnitTests\OLEDBlackScreenTests.dproj"/>
+    </Target>
+    <Target Name="OLEDBlackScreenTests:Clean">
+        <MSBuild Projects="UnitTests\OLEDBlackScreenTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OLEDBlackScreenTests:Make">
+        <MSBuild Projects="UnitTests\OLEDBlackScreenTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OLEDBlackScreen">
+        <MSBuild Projects="OLEDBlackScreen.dproj"/>
+    </Target>
+    <Target Name="OLEDBlackScreen:Clean">
+        <MSBuild Projects="OLEDBlackScreen.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OLEDBlackScreen:Make">
+        <MSBuild Projects="OLEDBlackScreen.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OLEDBlackScreenTests;OLEDBlackScreen"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OLEDBlackScreenTests:Clean;OLEDBlackScreen:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OLEDBlackScreenTests:Make;OLEDBlackScreen:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
