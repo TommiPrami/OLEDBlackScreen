@@ -52,13 +52,13 @@ const
 
   KernelDLL = 'kernel32.dll';
 
-{
-  SetThreadExecutionState Function
-  Enables an application to inform the system that it is in use,
-  thereby preventing the system from entering sleep or turning off the
-  display while the application is running.
-}
-procedure SetThreadExecutionState(ESFlags: EXECUTION_STATE); stdcall; external kernel32 name 'SetThreadExecutionState';
+  {
+    SetThreadExecutionState Function
+    Enables an application to inform the system that it is in use,
+    thereby preventing the system from entering sleep or turning off the
+    display while the application is running.
+  }
+  procedure SetThreadExecutionState(ESFlags: EXECUTION_STATE); stdcall; external kernel32 name 'SetThreadExecutionState';
 
 constructor TSystemCritical.Create;
 begin

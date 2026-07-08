@@ -13,22 +13,42 @@ type
     ActionOK: TAction;
     ButtonCancel: TButton;
     ButtonOK: TButton;
+    CheckBoxFriday: TCheckBox;
+    CheckBoxLockOnScheduleEnd: TCheckBox;
+    CheckBoxMonday: TCheckBox;
+    CheckBoxSaturday: TCheckBox;
+    CheckBoxSunday: TCheckBox;
+    CheckBoxThursday: TCheckBox;
+    CheckBoxTuesday: TCheckBox;
+    CheckBoxWednesday: TCheckBox;
+    LabeledEditLockIdleSeconds: TLabeledEdit;
     LabeledEditMouseMoveDistance: TLabeledEdit;
     LabeledEditMouseMoveResetTime: TLabeledEdit;
+    LabeledEditScheduleEnd: TLabeledEdit;
+    LabeledEditScheduleStart: TLabeledEdit;
     LabeledEditUserIdleTime: TLabeledEdit;
+    LabelLockIdleSecondsUnit: TLabel;
     LabelMouseMoveDistanceUnit: TLabel;
     LabelMouseMoveResetTimeUnit: TLabel;
+    LabelScheduleHint: TLabel;
+    LabelScheduleTitle: TLabel;
     LabelUserIdleTimeUnit: TLabel;
+    LabelVersion: TLabel;
     PanelButtons: TPanel;
     PanelMain: TPanel;
     ScrollBoxMain: TScrollBox;
-    LabelVersion: TLabel;
+    procedure FormCreate(Sender: TObject);
     procedure ActionCancelExecute(Sender: TObject);
     procedure ActionOKExecute(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure ScheduleControlClick(Sender: TObject);
   private
     FSettings: TSettings;
+    function DayCheckBoxes: TArray<TCheckBox>;
     function ValidateInput: Boolean;
+    procedure LoadScheduleControls;
+    procedure SetTimeFormat(const ALabel: TBoundLabel);
+    procedure UpdateScheduleControlsEnabled;
   public
     property Settings: TSettings read FSettings write FSettings;
 
@@ -40,6 +60,9 @@ var
   OLBSettingsForm: TOLBSettingsForm;
 
 implementation
+
+uses
+  OBSUnit.Utils;
 
 {$R *.dfm}
 
@@ -93,6 +116,12 @@ begin
   Result := Format('%d.%d.%d.%d', [LMajor, LMinor, LRelease, LBuild]);
 end;
 
+procedure TOLBSettingsForm.FormCreate(Sender: TObject);
+begin
+  SetTimeFormat(LabeledEditScheduleStart.EditLabel);
+  SetTimeFormat(LabeledEditScheduleEnd.EditLabel);
+end;
+
 procedure TOLBSettingsForm.ActionCancelExecute(Sender: TObject);
 begin
   ModalResult := mrCancel;
@@ -132,43 +161,177 @@ begin
   end;
 end;
 
+procedure TOLBSettingsForm.ScheduleControlClick(Sender: TObject); //FI:O804
+begin
+  UpdateScheduleControlsEnabled;
+end;
+
+procedure TOLBSettingsForm.SetTimeFormat(const ALabel: TBoundLabel);
+begin
+  if string(ALabel.Caption).Contains('%s', True) then
+    ALabel.Caption := Format(ALabel.Caption, [string(FormatSettings.TimeSeparator)]);
+end;
+
+function TOLBSettingsForm.DayCheckBoxes: TArray<TCheckBox>;
+begin
+  // Order must match TWeekDay (Monday .. Sunday).
+  Result := [CheckBoxMonday, CheckBoxTuesday, CheckBoxWednesday, CheckBoxThursday,
+    CheckBoxFriday, CheckBoxSaturday, CheckBoxSunday];
+end;
+
 procedure TOLBSettingsForm.FormShow(Sender: TObject);
 begin
   LabeledEditUserIdleTime.Text := FSettings.UserIdleTime.ToString;
   LabeledEditMouseMoveDistance.Text := FSettings.MouseMoveDistance.ToString;
   LabeledEditMouseMoveResetTime.Text := FSettings.MouseMoveResetTime.ToString;
 
+  LoadScheduleControls;
+
   LabelVersion.Caption := 'Version: ' + GetAppVersionStr;
+end;
+
+procedure TOLBSettingsForm.LoadScheduleControls;
+var
+  LDay: TWeekDay;
+  LCheckBoxes: TArray<TCheckBox>;
+begin
+  LCheckBoxes := DayCheckBoxes;
+
+  for LDay := Low(TWeekDay) to High(TWeekDay) do
+    LCheckBoxes[Ord(LDay)].Checked := LDay in FSettings.ScheduleDays;
+
+  if FSettings.ScheduleStartMinutes >= 0 then
+    LabeledEditScheduleStart.Text := MinutesToTime(FSettings.ScheduleStartMinutes)
+  else
+    LabeledEditScheduleStart.Text := '';
+
+  if FSettings.ScheduleEndMinutes >= 0 then
+    LabeledEditScheduleEnd.Text := MinutesToTime(FSettings.ScheduleEndMinutes)
+  else
+    LabeledEditScheduleEnd.Text := '';
+
+  CheckBoxLockOnScheduleEnd.Checked := FSettings.LockWhenScheduleEnds;
+  LabeledEditLockIdleSeconds.Text := FSettings.LockIdleSeconds.ToString;
+
+  UpdateScheduleControlsEnabled;
+end;
+
+procedure TOLBSettingsForm.UpdateScheduleControlsEnabled;
+var
+  LCheckBox: TCheckBox;
+  LAnyDayChecked: Boolean;
+begin
+  LAnyDayChecked := False;
+
+  for LCheckBox in DayCheckBoxes do
+    if LCheckBox.Checked then
+    begin
+      LAnyDayChecked := True;
+      Break;
+    end;
+
+  // The times and the auto-lock are only meaningful when the schedule is active.
+  LabeledEditScheduleStart.Enabled := LAnyDayChecked;
+  LabeledEditScheduleEnd.Enabled := LAnyDayChecked;
+  CheckBoxLockOnScheduleEnd.Enabled := LAnyDayChecked;
+  LabeledEditLockIdleSeconds.Enabled := LAnyDayChecked and CheckBoxLockOnScheduleEnd.Checked;
 end;
 
 function TOLBSettingsForm.ValidateInput: Boolean;
 
-  function FieldError(const AEdit: TCustomEdit; const AFieldName: string): Boolean;
+  function FieldError(const AControl: TWinControl; const AMessage: string): Boolean;
   begin
-    MessageDlg(Format('Please enter a valid number for "%s".', [AFieldName]), mtError, [mbOK], 0);
-    AEdit.SetFocus;
+    MessageDlg(AMessage, mtError, [mbOK], 0);
+
+    if AControl.CanFocus then
+      AControl.SetFocus;
 
     Result := False;
+  end;
+
+  // Reads an optional "HH:MM" / "HH.MM" edit. Empty text is allowed and yields AMinutes = -1.
+  function TryReadOptionalTime(const AEdit: TLabeledEdit; const AFieldName: string; out AMinutes: Integer): Boolean;
+  begin
+    if Trim(AEdit.Text).IsEmpty then
+    begin
+      AMinutes := -1;
+      Exit(True);
+    end;
+
+    Result := TryParseTime(AEdit.Text, AMinutes);
+
+    if not Result then
+      FieldError(AEdit, Format('Please enter "%s" as HH%sMM (24-hour), or leave it empty.', [AFieldName,
+        string(FormatSettings.TimeSeparator)]));
   end;
 
 var
   LUserIdleTime: Integer;
   LMouseMoveDistance: Double;
   LMouseMoveResetTime: Integer;
+  LDays: TWeekDays;
+  LStartMinutes: Integer;
+  LEndMinutes: Integer;
+  LDay: TWeekDay;
+  LCheckBoxes: TArray<TCheckBox>;
+  LLockWhenEnds: Boolean;
+  LLockIdleSeconds: Integer;
 begin
   // Validate everything first, then commit, so a later failure cannot leave FSettings half-updated.
   if not TryStrToInt(LabeledEditUserIdleTime.Text, LUserIdleTime) then
-    Exit(FieldError(LabeledEditUserIdleTime, 'User idle time'));
+    Exit(FieldError(LabeledEditUserIdleTime, 'Please enter a valid number for "User idle time".'));
 
   if not TryStrToFloat(LabeledEditMouseMoveDistance.Text, LMouseMoveDistance) then
-    Exit(FieldError(LabeledEditMouseMoveDistance, 'Mouse move distance'));
+    Exit(FieldError(LabeledEditMouseMoveDistance, 'Please enter a valid number for "Mouse move distance".'));
 
   if not TryStrToInt(LabeledEditMouseMoveResetTime.Text, LMouseMoveResetTime) then
-    Exit(FieldError(LabeledEditMouseMoveResetTime, 'Mouse move reset time'));
+    Exit(FieldError(LabeledEditMouseMoveResetTime, 'Please enter a valid number for "Mouse move reset time".'));
+
+  LDays := [];
+  LCheckBoxes := DayCheckBoxes;
+  for LDay := Low(TWeekDay) to High(TWeekDay) do
+    if LCheckBoxes[Ord(LDay)].Checked then
+      Include(LDays, LDay);
+
+  // Times only matter when a day is chosen; otherwise the schedule is off entirely.
+  if LDays = [] then
+  begin
+    LStartMinutes := -1;
+    LEndMinutes := -1;
+  end
+  else
+  begin
+    if not TryReadOptionalTime(LabeledEditScheduleStart, 'Start time', LStartMinutes) then
+      Exit(False);
+
+    if not TryReadOptionalTime(LabeledEditScheduleEnd, 'End time', LEndMinutes) then
+      Exit(False);
+
+    if (LStartMinutes >= 0) and (LEndMinutes >= 0) and (LStartMinutes >= LEndMinutes) then
+      Exit(FieldError(LabeledEditScheduleStart, 'The schedule start time must be earlier than the end time.'));
+  end;
+
+  // Auto-lock only applies when a schedule is set. Validate the idle grace strictly
+  // when it is enabled; otherwise keep a sane value without blocking the save.
+  LLockWhenEnds := (LDays <> []) and CheckBoxLockOnScheduleEnd.Checked;
+
+  if LLockWhenEnds then
+  begin
+    if not TryStrToInt(LabeledEditLockIdleSeconds.Text, LLockIdleSeconds) or (LLockIdleSeconds <= 0) then
+      Exit(FieldError(LabeledEditLockIdleSeconds,
+        'Please enter "Lock after idle" as a whole number of seconds greater than zero.'));
+  end
+  else if not TryStrToInt(LabeledEditLockIdleSeconds.Text, LLockIdleSeconds) then
+    LLockIdleSeconds := FSettings.LockIdleSeconds;
 
   FSettings.UserIdleTime := LUserIdleTime;
   FSettings.MouseMoveDistance := LMouseMoveDistance;
   FSettings.MouseMoveResetTime := LMouseMoveResetTime;
+  FSettings.ScheduleDays := LDays;
+  FSettings.ScheduleStartMinutes := LStartMinutes;
+  FSettings.ScheduleEndMinutes := LEndMinutes;
+  FSettings.LockWhenScheduleEnds := LLockWhenEnds;
+  FSettings.LockIdleSeconds := LLockIdleSeconds;
 
   Result := True;
 end;

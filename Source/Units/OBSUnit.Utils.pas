@@ -14,11 +14,16 @@ uses
   procedure LoadSettingsFromFile(const ASettingsFullFilename: string; var ASettings: TSettings);
   procedure LoadSettings(var ASettingsFullFilename: string; var ASettings: TSettings);
   procedure WriteSettings(const ASettingsFullFilename: string; const ASettings: TSettings);
+  // Parses an "HH:MM" 24-hour time into minutes since midnight. Returns False (and
+  // AMinutes = -1) for anything that is not a valid time., accepts FormatSettings.TimeSeparator, : and .
+  function TryParseTime(const AText: string; var AMinutes: Integer): Boolean;
+  // Formats minutes since midnight back into "HH:MM". Uses FormatSettings.TimeSeparator
+  function MinutesToTime(const AMinutes: Integer): string;
 
 implementation
 
 uses
-  Winapi.Windows, System.Classes, System.IOUtils, System.SysUtils, Grijjy.Bson, Grijjy.Bson.IO, Grijjy.Bson.Serialization;
+  Winapi.Windows, System.Classes, System.IOUtils, System.Math, System.SysUtils, Grijjy.Bson, Grijjy.Bson.IO, Grijjy.Bson.Serialization;
 
 {$IF NOT Defined(DEBUG)}
 procedure DoNothing;
@@ -101,6 +106,52 @@ begin
   finally
     LStream.Free;
   end;
+end;
+
+function GetTimeSeparatorPosition(const AText: string): Integer;
+begin
+  Result := Pos(FormatSettings.TimeSeparator, AText);
+
+  if Result <= 0 then
+  begin
+    Result := Pos(':', AText);
+
+    if Result <= 0 then
+      Result := Pos('.', AText);
+  end;
+end;
+
+function TryParseTime(const AText: string; var AMinutes: Integer): Boolean;
+var
+  LText: string;
+  LTimeSeparator: Integer;
+  LHours: Integer;
+  LMinutes: Integer;
+begin
+  Result := False;
+  AMinutes := -1;
+
+  LText := Trim(AText);
+
+  LTimeSeparator := GetTimeSeparatorPosition(LText);
+
+  if not TryStrToInt(Copy(LText, 1, LTimeSeparator - 1), LHours) then
+    Exit;
+
+  if not TryStrToInt(Copy(LText, LTimeSeparator + 1, Length(LText)), LMinutes) then
+    Exit;
+
+  if not InRange(LHours, 0, 23) or not InRange(LMinutes,  0, 59) then
+    Exit;
+
+  AMinutes := LHours * 60 + LMinutes;
+  Result := True;
+end;
+
+function MinutesToTime(const AMinutes: Integer): string;
+begin
+  // Use the locale time separator so a loaded value matches the suggested format shown by the edit.
+  Result := Format('%.2d%s%.2d', [AMinutes div 60, string(FormatSettings.TimeSeparator), AMinutes mod 60]);
 end;
 
 end.

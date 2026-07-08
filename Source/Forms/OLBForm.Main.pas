@@ -40,24 +40,26 @@ type
     Timer: TTimer;
     TimerAfterShow: TTimer;
     TrayIcon: TTrayIcon;
-    procedure ActionCloseExecute(Sender: TObject);
-    procedure ActionSettingsExecute(Sender: TObject);
-    procedure ActionStopSavingScreenExecute(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormCreate(Sender: TObject);
-    procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
-    procedure FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure MenuItemPauseClick(Sender: TObject);
-    procedure TimerAfterShowTimer(Sender: TObject);
-    procedure TimerTimer(Sender: TObject);
-    procedure TrayIconDblClick(Sender: TObject);
+    procedure ActionCloseExecute(ASender: TObject);
+    procedure ActionSettingsExecute(ASender: TObject);
+    procedure ActionStopSavingScreenExecute(ASender: TObject);
+    procedure FormClose(ASender: TObject; var AAction: TCloseAction);
+    procedure FormCreate(ASender: TObject);
+    procedure FormKeyUp(ASender: TObject; var AKey: Word; AShift: TShiftState);
+    procedure FormMouseMove(ASender: TObject; AShift: TShiftState; AX, AY: Integer);
+    procedure FormMouseUp(ASender: TObject; AButton: TMouseButton; AShift: TShiftState; AX, AY: Integer);
+    procedure MenuItemPauseClick(ASender: TObject);
+    procedure TimerAfterShowTimer(ASender: TObject);
+    procedure TimerTimer(ASender: TObject);
+    procedure TrayIconDblClick(ASender: TObject);
   strict private
     FIdleWatch: TStopwatch;
+    FLockingBlocked: Boolean;
     FMaxIdleMoveDistance: Integer;
     FMinIdleMouseMoveInterval: Double; // Seconds
     FMouseDistance: TMouseDistance;
     FPauseUntil: TDateTime;
+    FPendingLock: Boolean;
     FSavingScreen: Boolean;
     FSettings: TSettings;
     FSettingsFullFilename: string;
@@ -68,9 +70,11 @@ type
     procedure GetRidOfCheckedPauseMenu;
     procedure HideForm;
     procedure PauseFor(const AMinutesToPause: Integer);
+    procedure ProcessPendingLock;
     procedure ShowForm;
     procedure StartSavingScreen;
     procedure StopSavingScreen;
+    procedure UpdateLockingState;
   protected
     procedure CreateParams(var AParams: TCreateParams); override;
   end;
@@ -85,12 +89,12 @@ uses
 
 {$R *.dfm}
 
-procedure TOLBMainForm.ActionCloseExecute(Sender: TObject);
+procedure TOLBMainForm.ActionCloseExecute(ASender: TObject);
 begin
   Close;
 end;
 
-procedure TOLBMainForm.ActionSettingsExecute(Sender: TObject);
+procedure TOLBMainForm.ActionSettingsExecute(ASender: TObject);
 begin
   if not Assigned(OLBSettingsForm) then
     if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
@@ -100,7 +104,7 @@ begin
     end;
 end;
 
-procedure TOLBMainForm.ActionStopSavingScreenExecute(Sender: TObject);
+procedure TOLBMainForm.ActionStopSavingScreenExecute(ASender: TObject);
 begin
   StopSavingScreen;
 end;
@@ -147,12 +151,12 @@ begin
   AParams.WndParent := Application.Handle;
 end;
 
-procedure TOLBMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
+procedure TOLBMainForm.FormClose(ASender: TObject; var AAction: TCloseAction);
 begin
   SystemCritical.Stop;
 end;
 
-procedure TOLBMainForm.FormCreate(Sender: TObject);
+procedure TOLBMainForm.FormCreate(ASender: TObject);
 begin
   Randomize; // So GetRandomMouseInput does not produce the same jitter sequence every launch
 
@@ -164,27 +168,27 @@ begin
   LoadSettings(FSettingsFullFilename, FSettings);
   ApplySettings; // Must run after LoadSettings so FMouseDistance uses the loaded MouseMoveResetTime
 
-  SystemCritical.Start;
+  UpdateLockingState; // Set the initial "prevent locking" state from the (possibly scheduled) settings
 end;
 
-procedure TOLBMainForm.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TOLBMainForm.FormKeyUp(ASender: TObject; var AKey: Word; AShift: TShiftState);
 begin
-  if (Shift = []) and (Key in [Ord('a')..Ord('z'), Ord('A')..Ord('Z'), VK_SPACE]) then
+  if (AShift = []) and (AKey in [Ord('a')..Ord('z'), Ord('A')..Ord('Z'), VK_SPACE]) then
     ActionStopSavingScreen.Execute
-  else if (Shift = [ssCtrl]) and (Key in [Ord('x'), Ord('z'), Ord('X'), Ord('Z')]) then
+  else if (AShift = [ssCtrl]) and (AKey in [Ord('x'), Ord('z'), Ord('X'), Ord('Z')]) then
     ActionStopSavingScreen.Execute
 end;
 
-procedure TOLBMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+procedure TOLBMainForm.FormMouseMove(ASender: TObject; AShift: TShiftState; AX, AY: Integer);
 begin
-  if FMouseDistance.AddCoordinate(X, Y) > FSettings.MouseMoveDistance then
+  if FMouseDistance.AddCoordinate(AX, AY) > FSettings.MouseMoveDistance then
     StopSavingScreen;
 end;
 
-procedure TOLBMainForm.FormMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TOLBMainForm.FormMouseUp(ASender: TObject; AButton: TMouseButton; AShift: TShiftState; AX, AY: Integer);
 begin
-  if Button = mbRight then
-    PopupMenuTrayIcon.Popup(X, Y)
+  if AButton = mbRight then
+    PopupMenuTrayIcon.Popup(AX, AY)
   else
     StopSavingScreen;
 end;
@@ -224,11 +228,11 @@ begin
   {$ENDIF}
 end;
 
-procedure TOLBMainForm.MenuItemPauseClick(Sender: TObject);
+procedure TOLBMainForm.MenuItemPauseClick(ASender: TObject);
 begin
-  if Sender is TMenuItem then
+  if ASender is TMenuItem then
   begin
-    var LMenuItem := Sender as TMenuItem;
+    var LMenuItem := ASender as TMenuItem;
 
     if LMenuItem.Tag > 0 then
     begin
@@ -289,7 +293,49 @@ begin
   FSavingScreen := False;
 end;
 
-procedure TOLBMainForm.TimerAfterShowTimer(Sender: TObject);
+procedure TOLBMainForm.ProcessPendingLock;
+begin
+  if not FPendingLock then
+    Exit;
+
+  // Avoid locking mid-action: only lock once the user is clearly idle. If the screen
+  // saver is already up they have been idle at least UserIdleTime; otherwise wait for
+  // the configured number of seconds without real mouse/keyboard input.
+  if FSavingScreen or (GetSecondsSinceLastInput >= FSettings.LockIdleSeconds) then
+  begin
+    FPendingLock := False;
+
+    if not LockWorkStation then
+      AddDebugLine('LockWorkStation failed: ' + SysErrorMessage(GetLastError));
+  end;
+end;
+
+procedure TOLBMainForm.UpdateLockingState;
+var
+  LShouldBlock: Boolean;
+begin
+  // The schedule governs only whether we keep the computer from locking; the
+  // screen-saving (black screen) feature is intentionally left untouched.
+  LShouldBlock := FSettings.BlocksLockingAt(Now);
+
+  if LShouldBlock then
+    SystemCritical.Start
+  else
+    SystemCritical.Stop;
+
+  // The moment the no-lock window ends, optionally arm a lock. Re-entering a window
+  // cancels a pending lock so we never lock while we are supposed to stay awake.
+  if LShouldBlock then
+    FPendingLock := False
+  else if FLockingBlocked and FSettings.LockWhenScheduleEnds then
+    FPendingLock := True;
+
+  FLockingBlocked := LShouldBlock;
+
+  AddDebugLine('Blocking locking: ' + BoolToStr(LShouldBlock, True));
+end;
+
+procedure TOLBMainForm.TimerAfterShowTimer(ASender: TObject);
 begin
   TimerAfterShow.Enabled := False;
 
@@ -305,9 +351,12 @@ begin
   FIdleWatch.Reset;
 end;
 
-procedure TOLBMainForm.TimerTimer(Sender: TObject);
+procedure TOLBMainForm.TimerTimer(ASender: TObject);
 begin
   AddDebugLine('', True);
+
+  UpdateLockingState; // Keep the "prevent locking" state in sync with the schedule, independent of screen saving
+  ProcessPendingLock; // Lock the workstation once the no-lock window has ended and the user is idle
 
   if TimerAfterShow.Enabled then
     Exit;
@@ -366,7 +415,7 @@ begin
   end;
 end;
 
-procedure TOLBMainForm.TrayIconDblClick(Sender: TObject);
+procedure TOLBMainForm.TrayIconDblClick(ASender: TObject);
 begin
   ActionSettings.Execute;
 end;
