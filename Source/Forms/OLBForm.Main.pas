@@ -176,7 +176,7 @@ begin
   if (AShift = []) and (AKey in [Ord('a')..Ord('z'), Ord('A')..Ord('Z'), VK_SPACE]) then
     ActionStopSavingScreen.Execute
   else if (AShift = [ssCtrl]) and (AKey in [Ord('x'), Ord('z'), Ord('X'), Ord('Z')]) then
-    ActionStopSavingScreen.Execute
+    ActionStopSavingScreen.Execute;
 end;
 
 procedure TOLBMainForm.FormMouseMove(ASender: TObject; AShift: TShiftState; AX, AY: Integer);
