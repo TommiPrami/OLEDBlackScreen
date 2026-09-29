@@ -5,7 +5,7 @@
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <ProjectName Condition="'$(ProjectName)'==''">OLEDBlackScreen</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
@@ -73,12 +73,12 @@
         <SanitizedProjectName>OLEDBlackScreen</SanitizedProjectName>
         <DCC_UnitSearchPath>.\Source\3rdParty\SVGIconImageList\Image32\source\;.\Source\3rdParty\SVGIconImageList\Source\;.\Source\3rdParty\GrijjyFoundation\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=0.5.9.12;InternalName=OLED Black Screen;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=0.5.9.12;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=0.6.11.14;InternalName=OLED Black Screen;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=0.6.11.14;Comments=</VerInfo_Keys>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_MajorVer>0</VerInfo_MajorVer>
-        <VerInfo_MinorVer>5</VerInfo_MinorVer>
-        <VerInfo_Release>9</VerInfo_Release>
-        <VerInfo_Build>12</VerInfo_Build>
+        <VerInfo_MinorVer>6</VerInfo_MinorVer>
+        <VerInfo_Release>11</VerInfo_Release>
+        <VerInfo_Build>14</VerInfo_Build>
         <VerInfo_PreRelease>true</VerInfo_PreRelease>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
