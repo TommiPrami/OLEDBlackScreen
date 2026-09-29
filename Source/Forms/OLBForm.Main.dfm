@@ -18,6 +18,7 @@ object OLBMainForm: TOLBMainForm
   WindowState = wsMinimized
   OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnKeyUp = FormKeyUp
   OnMouseMove = FormMouseMove
   OnMouseUp = FormMouseUp

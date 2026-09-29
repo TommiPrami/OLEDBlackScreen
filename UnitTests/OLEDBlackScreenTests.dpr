@@ -16,12 +16,12 @@ uses
   {$ENDIF}
   System.SysUtils,
   DUnitX.TestFramework,
-  DUnitX.Loggers.Console,
-  DUnitX.Loggers.Xml.NUnit,
   OBSUnit.Types in '..\Source\Units\OBSUnit.Types.pas',
   OBSUnit.Utils in '..\Source\Units\OBSUnit.Utils.pas',
+  OBSUnit.InputHook in '..\Source\Units\OBSUnit.InputHook.pas',
   Tests.OBSUnit.Utils in 'Tests.OBSUnit.Utils.pas',
-  Tests.OBSUnit.Types in 'Tests.OBSUnit.Types.pas';
+  Tests.OBSUnit.Types in 'Tests.OBSUnit.Types.pas',
+  Tests.OBSUnit.InputHook in 'Tests.OBSUnit.InputHook.pas';
 
 {$IF NOT Defined(TESTINSIGHT)}
 var

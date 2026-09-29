@@ -39,26 +39,8 @@ end;
 
 { TSystemCritical }
 
-// REF: https://msdn.microsoft.com/en-us/library/aa373208.aspx
-type
-  EXECUTION_STATE = DWORD;
-
-const
-  ES_SYSTEM_REQUIRED = $00000001;
-  ES_DISPLAY_REQUIRED = $00000002;
-  ES_USER_PRESENT = $00000004;
-  ES_AWAYMODE_REQUIRED = $00000040;
-  ES_CONTINUOUS = $80000000;
-
-  KernelDLL = 'kernel32.dll';
-
-  {
-    SetThreadExecutionState Function
-    Enables an application to inform the system that it is in use,
-    thereby preventing the system from entering sleep or turning off the
-    display while the application is running.
-  }
-  procedure SetThreadExecutionState(ESFlags: EXECUTION_STATE); stdcall; external kernel32 name 'SetThreadExecutionState';
+// SetThreadExecutionState and the ES_* flags come from Winapi.Windows.
+// REF: https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate
 
 constructor TSystemCritical.Create;
 begin

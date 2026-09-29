@@ -42,15 +42,24 @@ end;
 function GetSecondsSinceLastInput: Integer;
 var
   LLastInput: TLastInputInfo;
+  LElapsedTicks: Cardinal;
 begin
   LLastInput.cbSize := SizeOf(TLastInputInfo);
 
   if not GetLastInputInfo(LLastInput) then
     Exit(0);
 
-  // dwTime shares GetTickCount's 32-bit clock, so this Cardinal subtraction wraps correctly
-  // across the ~49.7-day rollover. (The old Abs() broke that and is not needed.)
-  Result := (GetTickCount - LLastInput.dwTime) div 1000;
+  // dwTime shares GetTickCount's 32-bit clock, so a wrapping Cardinal subtraction stays correct
+  // across the ~49.7-day rollover. Overflow checks are off here so Debug builds do not raise on it.
+  {$IFOPT Q+}{$DEFINE OBS_OVERFLOW_CHECKS}{$Q-}{$ENDIF}
+  LElapsedTicks := GetTickCount - LLastInput.dwTime;
+  {$IFDEF OBS_OVERFLOW_CHECKS}{$UNDEF OBS_OVERFLOW_CHECKS}{$Q+}{$ENDIF}
+
+  // An input time stamp slightly ahead of GetTickCount wraps to a huge value; that is "just now", not 49 days.
+  if LElapsedTicks > Cardinal(MaxInt) then
+    Exit(0);
+
+  Result := LElapsedTicks div 1000;
 end;
 
 function GetDefaultSettingsFilename: string;

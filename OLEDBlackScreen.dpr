@@ -6,7 +6,9 @@ uses
   OBSUnit.SystemCritical in 'Source\Units\OBSUnit.SystemCritical.pas',
   OLBForm.Settings in 'Source\Forms\OLBForm.Settings.pas' {OLBSettingsForm},
   OBSUnit.Types in 'Source\Units\OBSUnit.Types.pas',
-  OBSUnit.Utils in 'Source\Units\OBSUnit.Utils.pas';
+  OBSUnit.Utils in 'Source\Units\OBSUnit.Utils.pas',
+  OBSUnit.InputHook in 'Source\Units\OBSUnit.InputHook.pas',
+  OLBForm.Cover in 'Source\Forms\OLBForm.Cover.pas';
 
 {$R *.res}
 

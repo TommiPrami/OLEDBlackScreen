@@ -2,7 +2,7 @@ object OLBSettingsForm: TOLBSettingsForm
   Left = 0
   Top = 0
   Caption = 'OLED Black Screen Settings'
-  ClientHeight = 460
+  ClientHeight = 505
   ClientWidth = 426
   Color = clWindow
   Font.Charset = DEFAULT_CHARSET
@@ -16,7 +16,7 @@ object OLBSettingsForm: TOLBSettingsForm
   TextHeight = 15
   object PanelButtons: TPanel
     Left = 0
-    Top = 417
+    Top = 462
     Width = 426
     Height = 43
     Align = alBottom
@@ -39,6 +39,7 @@ object OLBSettingsForm: TOLBSettingsForm
       Margins.Bottom = 0
       Action = ActionOK
       Align = alRight
+      Default = True
       TabOrder = 0
     end
     object ButtonCancel: TButton
@@ -48,6 +49,7 @@ object OLBSettingsForm: TOLBSettingsForm
       Height = 27
       Action = ActionCancel
       Align = alRight
+      Cancel = True
       TabOrder = 1
     end
   end
@@ -55,7 +57,7 @@ object OLBSettingsForm: TOLBSettingsForm
     Left = 0
     Top = 0
     Width = 426
-    Height = 417
+    Height = 462
     Align = alClient
     BevelInner = bvNone
     BevelOuter = bvNone
@@ -66,7 +68,7 @@ object OLBSettingsForm: TOLBSettingsForm
       Left = 0
       Top = 0
       Width = 426
-      Height = 417
+      Height = 462
       Align = alClient
       BevelOuter = bvNone
       ParentColor = True
@@ -96,7 +98,7 @@ object OLBSettingsForm: TOLBSettingsForm
       object LabelVersion: TLabel
         AlignWithMargins = True
         Left = 8
-        Top = 399
+        Top = 444
         Width = 410
         Height = 15
         Margins.Left = 8
@@ -115,12 +117,14 @@ object OLBSettingsForm: TOLBSettingsForm
         Left = 8
         Top = 348
         Width = 401
-        Height = 45
-        Caption = 
+        Height = 90
+        Caption =
           'Leave all days unchecked to prevent locking around the clock. Wi' +
           'th a single time set, the other side of the window stays open. A' +
-          'uto-lock waits until you have been idle before locking, so it ne' +
-          'ver locks mid-action.'
+          ' start later than the end runs overnight into the next day. Auto' +
+          '-lock waits until you have been idle before locking, so it never' +
+          ' locks mid-action; for the rest of that day the computer is also' +
+          ' locked whenever the black screen comes on.'
         WordWrap = True
       end
       object LabelLockIdleSecondsUnit: TLabel

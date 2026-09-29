@@ -229,14 +229,17 @@ var
   LLockIdleSeconds: Integer;
 begin
   // Validate everything first, then commit, so a later failure cannot leave FSettings half-updated.
-  if not TryStrToInt(LabeledEditUserIdleTime.Text, LUserIdleTime) then
-    Exit(FieldError(LabeledEditUserIdleTime, 'Please enter a valid number for "User idle time".'));
+  // Zero is not harmless here: an idle time of 0 restarts the black screen every second right after it is
+  // dismissed, and a reset time of 0 clears the mouse distance on every move so it can never be dismissed by moving.
+  if not TryStrToInt(LabeledEditUserIdleTime.Text, LUserIdleTime) or (LUserIdleTime <= 0) then
+    Exit(FieldError(LabeledEditUserIdleTime, 'Please enter "User idle time" as a whole number greater than zero.'));
 
-  if not TryStrToFloat(LabeledEditMouseMoveDistance.Text, LMouseMoveDistance) then
-    Exit(FieldError(LabeledEditMouseMoveDistance, 'Please enter a valid number for "Mouse move distance".'));
+  if not TryStrToFloat(LabeledEditMouseMoveDistance.Text, LMouseMoveDistance) or (LMouseMoveDistance <= 0) then
+    Exit(FieldError(LabeledEditMouseMoveDistance, 'Please enter "Mouse move distance" as a number greater than zero.'));
 
-  if not TryStrToInt(LabeledEditMouseMoveResetTime.Text, LMouseMoveResetTime) then
-    Exit(FieldError(LabeledEditMouseMoveResetTime, 'Please enter a valid number for "Mouse move reset time".'));
+  if not TryStrToInt(LabeledEditMouseMoveResetTime.Text, LMouseMoveResetTime) or (LMouseMoveResetTime <= 0) then
+    Exit(FieldError(LabeledEditMouseMoveResetTime,
+      'Please enter "Mouse move reset time" as a whole number greater than zero.'));
 
   LDays := [];
   LCheckBoxes := DayCheckBoxes;
@@ -258,8 +261,9 @@ begin
     if not TryReadOptionalTime(LabeledEditScheduleEnd, 'End time', LEndMinutes) then
       Exit(False);
 
-    if (LStartMinutes >= 0) and (LEndMinutes >= 0) and (LStartMinutes >= LEndMinutes) then
-      Exit(FieldError(LabeledEditScheduleStart, 'The schedule start time must be earlier than the end time.'));
+    // A start later than the end is an overnight window; only an equal start and end is ambiguous (empty or 24 h?)
+    if (LStartMinutes >= 0) and (LStartMinutes = LEndMinutes) then
+      Exit(FieldError(LabeledEditScheduleStart, 'The schedule start and end times must differ.'));
   end;
 
   // Auto-lock only applies when a schedule is set. Validate the idle grace strictly

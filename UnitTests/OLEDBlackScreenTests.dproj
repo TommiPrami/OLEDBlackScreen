@@ -101,8 +101,10 @@
         </DelphiCompile>
         <DCCReference Include="..\Source\Units\OBSUnit.Types.pas"/>
         <DCCReference Include="..\Source\Units\OBSUnit.Utils.pas"/>
+        <DCCReference Include="..\Source\Units\OBSUnit.InputHook.pas"/>
         <DCCReference Include="Tests.OBSUnit.Utils.pas"/>
         <DCCReference Include="Tests.OBSUnit.Types.pas"/>
+        <DCCReference Include="Tests.OBSUnit.InputHook.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

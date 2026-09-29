@@ -3,11 +3,11 @@
 interface
 
 uses
-  Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.Diagnostics, System.ImageList,
-  System.SysUtils, System.Variants, System.Win.TaskbarCore, Vcl.ActnList, Vcl.BaseImageCollection, Vcl.Controls,
-  Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.ImgList, Vcl.StdActns, Vcl.Taskbar, Vcl.VirtualImageList,
-  OBSUnit.SystemCritical, OBSUnit.Types, SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus,
-  Vcl.StdCtrls;
+  Winapi.Messages, Winapi.Windows, System.Actions, System.Classes, System.Diagnostics, System.Generics.Collections,
+  System.ImageList, System.SysUtils, System.Types, System.Variants, System.Win.TaskbarCore, Vcl.ActnList,
+  Vcl.BaseImageCollection, Vcl.Controls, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Forms, Vcl.Graphics, Vcl.ImgList, Vcl.StdActns,
+  Vcl.Taskbar, Vcl.VirtualImageList, OBSUnit.InputHook, OBSUnit.SystemCritical, OBSUnit.Types, OLBForm.Cover,
+  SVGIconImageCollection, SVGIconVirtualImageList, Vcl.ImageCollection, Vcl.Menus, Vcl.StdCtrls;
 
 {
   TODO:
@@ -45,6 +45,7 @@ type
     procedure ActionStopSavingScreenExecute(ASender: TObject);
     procedure FormClose(ASender: TObject; var AAction: TCloseAction);
     procedure FormCreate(ASender: TObject);
+    procedure FormDestroy(ASender: TObject);
     procedure FormKeyUp(ASender: TObject; var AKey: Word; AShift: TShiftState);
     procedure FormMouseMove(ASender: TObject; AShift: TShiftState; AX, AY: Integer);
     procedure FormMouseUp(ASender: TObject; AButton: TMouseButton; AShift: TShiftState; AX, AY: Integer);
@@ -53,7 +54,10 @@ type
     procedure TimerTimer(ASender: TObject);
     procedure TrayIconDblClick(ASender: TObject);
   strict private
+    FCovers: TList<TOLBCoverForm>;
+    FDisplayChanged: Boolean;
     FIdleWatch: TStopwatch;
+    FInputCaptured: Boolean;
     FLockingBlocked: Boolean;
     FMaxIdleMoveDistance: Integer;
     FMinIdleMouseMoveInterval: Double; // Seconds
@@ -63,18 +67,26 @@ type
     FSavingScreen: Boolean;
     FSettings: TSettings;
     FSettingsFullFilename: string;
+    function GetCoverRect(const AMonitor: TMonitor): TRect;
     function GetRandomMouseInput: TInput;
     procedure AddDebugLine(const ADebugLine: string; const AClear: Boolean = False);
     procedure ApplySettings;
     procedure CalculateIdleMouseMoveDistanceAndTime;
     procedure GetRidOfCheckedPauseMenu;
-    procedure HideForm;
+    procedure HideCovers;
+    procedure LockComputer;
     procedure PauseFor(const AMinutesToPause: Integer);
     procedure ProcessPendingLock;
-    procedure ShowForm;
+    procedure SetCoversCursor(const ACursor: TCursor);
+    procedure SetUpMainWindow;
+    procedure ShowCovers;
+    procedure StartInputCaptureOrFallBack;
     procedure StartSavingScreen;
     procedure StopSavingScreen;
     procedure UpdateLockingState;
+    procedure WMDisplayChange(var AMessage: TMessage); message WM_DISPLAYCHANGE;
+    procedure WMInputHookIdle(var AMessage: TMessage); message WM_OBS_INPUT_HOOK_IDLE;
+    procedure WMUserInput(var AMessage: TMessage); message WM_OBS_USER_INPUT;
   protected
     procedure CreateParams(var AParams: TCreateParams); override;
   end;
@@ -85,7 +97,7 @@ var
 implementation
 
 uses
-  System.DateUtils, System.Math, OBSUnit.Utils, OLBForm.Settings;
+  System.DateUtils, System.Math, System.UITypes, OBSUnit.Utils, OLBForm.Settings;
 
 {$R *.dfm}
 
@@ -96,12 +108,19 @@ end;
 
 procedure TOLBMainForm.ActionSettingsExecute(ASender: TObject);
 begin
-  if not Assigned(OLBSettingsForm) then
-    if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
-    begin
-      WriteSettings(FSettingsFullFilename, FSettings);
-      ApplySettings; // Re-read the cached, derived values so changes take effect without a restart
-    end;
+  if Assigned(OLBSettingsForm) then
+    Exit;
+
+  // The dialog is not topmost, so it would open hidden behind the black screen, and while it is modal
+  // the (disabled) black screen gets no mouse input to dismiss it.
+  if FSavingScreen then
+    StopSavingScreen;
+
+  if TOLBSettingsForm.ClassShowModal(Self, FSettings) = mrOk then
+  begin
+    ApplySettings; // Re-read the cached, derived values so changes take effect without a restart, even if saving fails
+    WriteSettings(FSettingsFullFilename, FSettings);
+  end;
 end;
 
 procedure TOLBMainForm.ActionStopSavingScreenExecute(ASender: TObject);
@@ -153,44 +172,100 @@ end;
 
 procedure TOLBMainForm.FormClose(ASender: TObject; var AAction: TCloseAction);
 begin
+  StopInputCapture;
   SystemCritical.Stop;
 end;
 
 procedure TOLBMainForm.FormCreate(ASender: TObject);
+var
+  LDefaultSettings: TSettings;
 begin
   Randomize; // So GetRandomMouseInput does not produce the same jitter sequence every launch
 
+  FCovers := TList<TOLBCoverForm>.Create; // The covers themselves are owned (and freed) by the form
   FPauseUntil := 0.00;
 
   LabelDebug.Visible := {$IFDEF DEBUG}True{$ELSE}False{$ENDIF};
   Visible := LabelDebug.Visible;
 
-  LoadSettings(FSettingsFullFilename, FSettings);
+  try
+    LoadSettings(FSettingsFullFilename, FSettings);
+  except
+    on E: Exception do
+    begin
+      // A broken settings file must not abort FormCreate half-way (ApplySettings would never run);
+      // fall back to the defaults, a later save from the settings dialog overwrites the broken file.
+      FSettings := LDefaultSettings;
+
+      MessageDlg(Format('Could not read the settings from "%s", using the defaults.%s%s',
+        [FSettingsFullFilename, sLineBreak + sLineBreak, E.Message]), mtWarning, [mbOK], 0);
+    end;
+  end;
+
   ApplySettings; // Must run after LoadSettings so FMouseDistance uses the loaded MouseMoveResetTime
 
   UpdateLockingState; // Set the initial "prevent locking" state from the (possibly scheduled) settings
 end;
 
+procedure TOLBMainForm.FormDestroy(ASender: TObject);
+begin
+  FCovers.Free;
+end;
+
 procedure TOLBMainForm.FormKeyUp(ASender: TObject; var AKey: Word; AShift: TShiftState);
 begin
-  if (AShift = []) and (AKey in [Ord('a')..Ord('z'), Ord('A')..Ord('Z'), VK_SPACE]) then
-    ActionStopSavingScreen.Execute
-  else if (AShift = [ssCtrl]) and (AKey in [Ord('x'), Ord('z'), Ord('X'), Ord('Z')]) then
+  // Normally the input hook handles keys (see WMUserInput); this only runs when it could not be installed
+  // and the black screen took the focus instead, or for the Debug window.
+  if GetKeyKind(AKey) = kkKey then
+  begin
     ActionStopSavingScreen.Execute;
+  end;
 end;
 
 procedure TOLBMainForm.FormMouseMove(ASender: TObject; AShift: TShiftState; AX, AY: Integer);
 begin
-  if FMouseDistance.AddCoordinate(AX, AY) > FSettings.MouseMoveDistance then
+  if not FSavingScreen then
+    Exit;
+
+  // Screen coordinates, so a move from one monitor's cover onto the next adds up correctly
+  var LScreenPoint := (ASender as TControl).ClientToScreen(Point(AX, AY));
+
+  if FMouseDistance.AddCoordinate(LScreenPoint.X, LScreenPoint.Y) > FSettings.MouseMoveDistance then
     StopSavingScreen;
 end;
 
 procedure TOLBMainForm.FormMouseUp(ASender: TObject; AButton: TMouseButton; AShift: TShiftState; AX, AY: Integer);
 begin
   if AButton = mbRight then
-    PopupMenuTrayIcon.Popup(AX, AY)
+  begin
+    var LScreenPoint := (ASender as TControl).ClientToScreen(Point(AX, AY)); // Popup wants screen coordinates
+
+    // The menu must get the keys while it is open, and like a tray menu it needs our application in the
+    // foreground to close properly when clicking elsewhere.
+    StopInputCapture;
+    try
+      SetForegroundWindow(Application.Handle);
+      PopupMenuTrayIcon.Popup(LScreenPoint.X, LScreenPoint.Y);
+    finally
+      if FSavingScreen then
+        StartInputCaptureOrFallBack;
+    end;
+  end
   else
     StopSavingScreen;
+end;
+
+function TOLBMainForm.GetCoverRect(const AMonitor: TMonitor): TRect;
+begin
+  Result := AMonitor.BoundsRect; // The whole monitor, taskbar included: it must not stay lit either
+
+  {$IFDEF DEBUG}
+  // Debug: a third of each monitor in its bottom-right corner, so the desktop stays usable while testing
+  const LMargin = 64;
+
+  Result := Rect(Result.Right - AMonitor.Width div 3 - LMargin, Result.Bottom - AMonitor.Height div 3 - LMargin,
+    Result.Right - LMargin, Result.Bottom - LMargin);
+  {$ENDIF}
 end;
 
 function TOLBMainForm.GetRandomMouseInput: TInput;
@@ -199,12 +274,14 @@ const
 begin
   FillChar(Result, SizeOf(TInput), 0);
 
-  var LMaxMoveDistance := FMaxIdleMoveDistance div MAX_MOVE_FRACTION;
+  // At least one pixel, so a small MouseMoveDistance does not turn every nudge into a zero move
+  var LMaxMoveDistance := Max(FMaxIdleMoveDistance div MAX_MOVE_FRACTION, 1);
 
   Result.Itype := INPUT_MOUSE;
   Result.mi.dwFlags := MOUSEEVENTF_MOVE;
-  Result.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
-  Result.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance);
+  // RandomRange excludes the upper bound; without the + 1 the cursor slowly drifts up and left
+  Result.mi.dx := RandomRange(-LMaxMoveDistance, LMaxMoveDistance + 1);
+  Result.mi.dy := RandomRange(-LMaxMoveDistance, LMaxMoveDistance + 1);
   Result.mi.time := GetTickCount;
 end;
 
@@ -215,17 +292,16 @@ begin
       MenuItemPause.Items[LIndex].Checked := False;
 end;
 
-procedure TOLBMainForm.HideForm;
+procedure TOLBMainForm.HideCovers;
 begin
-  {$IFDEF RELEASE}
-  AlphaBlendValue := 0;
-  AlphaBlend := True;
-  WindowState := TWindowState.wsMinimized;
-  Visible := False;
-  ShowWindow(Handle, SW_HIDE);
-  {$ELSE}
-  AddDebugLine('Hide Form...', True);
-  {$ENDIF}
+  for var LCover in FCovers do
+    LCover.HideCover;
+end;
+
+procedure TOLBMainForm.LockComputer;
+begin
+  if not LockWorkStation then
+    AddDebugLine('LockWorkStation failed: ' + SysErrorMessage(GetLastError));
 end;
 
 procedure TOLBMainForm.MenuItemPauseClick(ASender: TObject);
@@ -256,41 +332,15 @@ end;
 procedure TOLBMainForm.PauseFor(const AMinutesToPause: Integer);
 begin
   if AMinutesToPause > 0 then
-    FPauseUntil := IncMinute(Now, AMinutesToPause)
+  begin
+    FPauseUntil := IncMinute(Now, AMinutesToPause);
+
+    // Picked from the black screen's own right-click menu: pausing means "give me the screen back"
+    if FSavingScreen then
+      StopSavingScreen;
+  end
   else
     FPauseUntil := 0.00;
-end;
-
-procedure TOLBMainForm.ShowForm;
-begin
-  BorderStyle := bsNone;
-  WindowState := {$IFDEF RELEASE}TWindowState.wsMaximized{$ELSE}TWindowState.wsNormal{$ENDIF};
-
-  FormStyle := fsStayOnTop;
-  Visible := True;
-  AlphaBlendValue := 255;
-  AlphaBlend := False;
-
-  // Last step
-  Application.BringToFront;
-end;
-
-procedure TOLBMainForm.StartSavingScreen;
-begin
-  ShowForm;
-
-  FMouseDistance.Clear;
-  FSavingScreen := True;
-end;
-
-procedure TOLBMainForm.StopSavingScreen;
-begin
-  HideForm;
-
-  FPauseUntil := 0.00;
-
-  FMouseDistance.Clear;
-  FSavingScreen := False;
 end;
 
 procedure TOLBMainForm.ProcessPendingLock;
@@ -305,17 +355,112 @@ begin
   begin
     FPendingLock := False;
 
-    if not LockWorkStation then
-      AddDebugLine('LockWorkStation failed: ' + SysErrorMessage(GetLastError));
+    LockComputer;
   end;
+end;
+
+procedure TOLBMainForm.SetCoversCursor(const ACursor: TCursor);
+begin
+  for var LCover in FCovers do
+    LCover.Cursor := ACursor; // Takes effect at once when the mouse is over the cover (CM_CURSORCHANGED)
+end;
+
+procedure TOLBMainForm.SetUpMainWindow;
+begin
+  // The main form is never the black screen itself, the per-monitor covers are.
+  {$IFDEF DEBUG}
+  // Debug: a small stay-on-top window that shows the debug lines
+  BorderStyle := bsNone;
+  WindowState := TWindowState.wsNormal;
+  FormStyle := fsStayOnTop;
+  Visible := True;
+  AlphaBlendValue := 255;
+  AlphaBlend := False;
+  Left := Round(Screen.MonitorFromWindow(Handle).Width * 0.07);
+  Top := Round(Screen.MonitorFromWindow(Handle).Height * 0.07);
+  {$ELSE}
+  // Release: never shown
+  AlphaBlendValue := 0;
+  AlphaBlend := True;
+  WindowState := TWindowState.wsMinimized;
+  Visible := False;
+  ShowWindow(Handle, SW_HIDE);
+  {$ENDIF}
+end;
+
+procedure TOLBMainForm.ShowCovers;
+begin
+  // Monitors can come and go between two black screens (VCL refreshes Screen.Monitors on WM_DISPLAYCHANGE),
+  // so keep exactly one cover per monitor. Never called from a cover's own event handler, so Free is safe.
+  while FCovers.Count > Screen.MonitorCount do
+  begin
+    FCovers.Last.Free;
+    FCovers.Delete(FCovers.Count - 1);
+  end;
+
+  while FCovers.Count < Screen.MonitorCount do
+  begin
+    var LCover := TOLBCoverForm.Create(Self);
+
+    LCover.OnKeyUp := FormKeyUp;
+    LCover.OnMouseMove := FormMouseMove;
+    LCover.OnMouseUp := FormMouseUp;
+
+    FCovers.Add(LCover);
+  end;
+
+  for var LIndex := 0 to FCovers.Count - 1 do
+    FCovers[LIndex].ShowCover(GetCoverRect(Screen.Monitors[LIndex]));
+end;
+
+procedure TOLBMainForm.StartInputCaptureOrFallBack;
+begin
+  FInputCaptured := StartInputCapture(Handle);
+
+  if not FInputCaptured then
+  begin
+    AddDebugLine('Could not install the input hooks: ' + SysErrorMessage(GetLastError));
+
+    // Fallback: take the focus, so FormKeyUp at least sees the keys. The cursor stays visible, because
+    // without the mouse hook a real mouse move cannot be told apart from our own nudges.
+    if FCovers.Count > 0 then
+      SetForegroundWindow(FCovers.First.Handle);
+  end;
+end;
+
+procedure TOLBMainForm.StartSavingScreen;
+begin
+  FMouseDistance.Clear;
+  FSavingScreen := True;
+
+  ShowCovers;
+  StartInputCaptureOrFallBack;
+
+  // Hide the cursor until the user is back (WMUserInput shows it again on the first real mouse or key input)
+  if FInputCaptured then
+    SetCoversCursor(crNone)
+  else
+    SetCoversCursor(crDefault);
+end;
+
+procedure TOLBMainForm.StopSavingScreen;
+begin
+  StopInputCapture;
+  HideCovers;
+  // Back to default while hidden, so the next StartSavingScreen's crNone is a real change and VCL applies it
+  // at once (setting the same Cursor value again does nothing, and the cursor would stay until moved).
+  SetCoversCursor(crDefault);
+
+  FMouseDistance.Clear;
+  FSavingScreen := False;
 end;
 
 procedure TOLBMainForm.UpdateLockingState;
 var
   LShouldBlock: Boolean;
 begin
-  // The schedule governs only whether we keep the computer from locking; the
-  // screen-saving (black screen) feature is intentionally left untouched.
+  // The schedule governs whether we keep the computer from locking. The black screen still shows
+  // outside the window, but TimerTimer stops its mouse nudges there so Windows can lock too.
   LShouldBlock := FSettings.BlocksLockingAt(Now);
 
   if LShouldBlock then
@@ -339,13 +484,7 @@ procedure TOLBMainForm.TimerAfterShowTimer(ASender: TObject);
 begin
   TimerAfterShow.Enabled := False;
 
-  StopSavingScreen;
-
-  {$IFDEF DEBUG}
-  ShowForm;
-  Left := Round(Screen.MonitorFromWindow(Handle).Width * 0.07);
-  Top := Round(Screen.MonitorFromWindow(Handle).Height * 0.07);
-  {$ENDIF};
+  SetUpMainWindow;
 
   FIdleWatch.Stop;
   FIdleWatch.Reset;
@@ -369,10 +508,25 @@ begin
 
   if FSavingScreen then
   begin
+    // A monitor was added, removed or changed while the black screen is up. Handled here, a tick later,
+    // because VCL refreshes Screen.Monitors on its own WM_DISPLAYCHANGE, which may come after ours.
+    if FDisplayChanged then
+    begin
+      FDisplayChanged := False;
+      ShowCovers;
+    end;
+
+    // Windows silently drops a low-level hook that does not answer in time (e.g. the process sat at a
+    // breakpoint), after which keys would no longer end the black screen. Fresh hooks each tick undo that.
+    if FInputCaptured then
+      RenewInputCapture;
+
     if not FIdleWatch.IsRunning then
       FIdleWatch := TStopwatch.StartNew;
 
-    if FIdleWatch.Elapsed.TotalSeconds > FMinIdleMouseMoveInterval then
+    // The mouse nudges exist only to keep Windows from locking. Outside the no-lock window they
+    // must stop, or they reset Windows' own idle timer and the computer never locks behind the black screen.
+    if FLockingBlocked and (FIdleWatch.Elapsed.TotalSeconds > FMinIdleMouseMoveInterval) then
     begin
       var LInput := GetRandomMouseInput;
 
@@ -394,11 +548,20 @@ begin
     begin
       var LTimeToScreenSaving := FSettings.UserIdleTime - GetSecondsSinceLastInput;
 
-      if LTimeToScreenSaving <= 0 then
+      // Never cover an open modal dialog (settings, message box): the black screen is disabled then,
+      // so mouse moves could not dismiss it and the dialog would be stuck invisible behind it.
+      if Application.ModalLevel > 0 then
+        AddDebugLine('Modal dialog open, not saving screen')
+      else if LTimeToScreenSaving <= 0 then
       begin
         StartSavingScreen;
 
         AddDebugLine('Saving screen...');
+
+        // Once today's no-lock window is over, going idle locks the computer as well. This covers being
+        // unlocked again after the end-of-window lock, and starting (or waking) the computer after the window.
+        if FSettings.LockWhenScheduleEnds and FSettings.ScheduleEndedEarlierToday(Now) then
+          LockComputer;
       end
       else
         AddDebugLine('Time to saving screen: ' + LTimeToScreenSaving.ToString);
@@ -418,6 +581,31 @@ end;
 procedure TOLBMainForm.TrayIconDblClick(ASender: TObject);
 begin
   ActionSettings.Execute;
+end;
+
+procedure TOLBMainForm.WMDisplayChange(var AMessage: TMessage);
+begin
+  inherited;
+
+  FDisplayChanged := True;
+end;
+
+procedure TOLBMainForm.WMInputHookIdle(var AMessage: TMessage);
+begin
+  ReleaseIdleInputHook;
+end;
+
+procedure TOLBMainForm.WMUserInput(var AMessage: TMessage);
+begin
+  if not FSavingScreen then
+    Exit;
+
+  // The user is back: show the cursor again. Any key other than Shift/Ctrl/Alt/Win also ends the black screen
+  // (the hook has already swallowed it, so it never reaches the application underneath).
+  SetCoversCursor(crDefault);
+
+  if TUserInputKind(AMessage.WParam) = uikKey then
+    StopSavingScreen;
 end;
 
 end.

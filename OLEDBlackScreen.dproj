@@ -4,7 +4,7 @@
         <ProjectVersion>20.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectName Condition="'$(ProjectName)'==''">OLEDBlackScreen</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
@@ -153,6 +153,8 @@
         </DCCReference>
         <DCCReference Include="Source\Units\OBSUnit.Types.pas"/>
         <DCCReference Include="Source\Units\OBSUnit.Utils.pas"/>
+        <DCCReference Include="Source\Units\OBSUnit.InputHook.pas"/>
+        <DCCReference Include="Source\Forms\OLBForm.Cover.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
